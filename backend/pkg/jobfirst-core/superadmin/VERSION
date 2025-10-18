@@ -1,0 +1,28 @@
+ZerviGo v3.1.1
+Release Date: 2025-09-11
+Type: Microservice Port Configuration Fix
+
+Changes:
+- Fixed Template Service port from 8087 to 8085
+- Fixed Banner Service port from 8085 to 8087
+- Maintained Statistics Service port 8086 (correct)
+- Updated service definitions and configurations
+- Added comprehensive testing scripts
+- Enhanced monitoring capabilities
+
+Compatibility:
+- Backward compatible with v3.1.0
+- Supports refactored microservices architecture
+- Compatible with Zervi-Basic v3.1.1
+
+Files Modified:
+- system/monitor.go (port configuration fixes)
+- system/services.go (service definitions update)
+- superadmin-config-v3.1.1.json (new configuration)
+
+Testing:
+- All refactored services verified (100% health)
+- API functionality tests passed
+- Port configuration validation completed
+
+Status: ✅ Ready for Production

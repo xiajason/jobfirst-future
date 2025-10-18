@@ -1,0 +1,160 @@
+# Basic Server集群配置
+cluster:
+  # 集群基础配置
+  cluster_id: "jobfirst-cluster-1"
+  node_id: "basic-server-node-1"
+  max_nodes: 10
+  
+  # 负载均衡配置
+  load_balance_strategy: "round-robin"  # round-robin, least-connections, weighted, ip-hash
+  health_check_interval: "30s"
+  node_timeout: "60s"
+  
+  # 数据同步配置
+  sync_workers: 5
+  sync_queue_size: 2000
+  sync_retry_interval: "5s"
+  max_sync_retries: 3
+  sync_timeout: "30s"
+  
+  # 监控配置
+  metrics_enabled: true
+  log_level: "info"
+
+# 集群节点配置
+nodes:
+  - node_id: "basic-server-node-1"
+    host: "localhost"
+    port: 8080
+    weight: 100
+    status: "active"
+    metadata:
+      service: "basic-server"
+      version: "1.0.0"
+      mode: "standalone"
+  
+  - node_id: "basic-server-node-2"
+    host: "localhost"
+    port: 8081
+    weight: 100
+    status: "inactive"
+    metadata:
+      service: "basic-server"
+      version: "1.0.0"
+      mode: "standalone"
+  
+  - node_id: "basic-server-node-3"
+    host: "localhost"
+    port: 8082
+    weight: 100
+    status: "inactive"
+    metadata:
+      service: "basic-server"
+      version: "1.0.0"
+      mode: "standalone"
+
+# 同步目标配置
+sync_targets:
+  - name: "unified-auth"
+    url: "http://localhost:8207"
+    enabled: true
+    sync_mode: "realtime"
+    timeout: "30s"
+    retry_count: 3
+  
+  - name: "user-service"
+    url: "http://localhost:8081"
+    enabled: true
+    sync_mode: "realtime"
+    timeout: "30s"
+    retry_count: 3
+  
+  - name: "ai-service"
+    url: "http://localhost:8206"
+    enabled: true
+    sync_mode: "near-realtime"
+    timeout: "60s"
+    retry_count: 2
+  
+  - name: "resume-service"
+    url: "http://localhost:8082"
+    enabled: true
+    sync_mode: "realtime"
+    timeout: "30s"
+    retry_count: 3
+  
+  - name: "company-service"
+    url: "http://localhost:8083"
+    enabled: true
+    sync_mode: "realtime"
+    timeout: "30s"
+    retry_count: 3
+  
+  - name: "job-service"
+    url: "http://localhost:8084"
+    enabled: true
+    sync_mode: "realtime"
+    timeout: "30s"
+    retry_count: 3
+
+# 负载均衡配置
+load_balancer:
+  strategy: "round-robin"
+  health_check:
+    enabled: true
+    interval: "30s"
+    timeout: "10s"
+    retry_count: 3
+  
+  # 节点权重配置
+  node_weights:
+    basic-server-node-1: 100
+    basic-server-node-2: 100
+    basic-server-node-3: 100
+
+# 监控配置
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  health_check_port: 8080
+  
+  # 指标收集
+  metrics:
+    - name: "cluster_nodes_total"
+      type: "gauge"
+      help: "Total number of cluster nodes"
+    
+    - name: "cluster_nodes_active"
+      type: "gauge"
+      help: "Number of active cluster nodes"
+    
+    - name: "cluster_requests_total"
+      type: "counter"
+      help: "Total number of requests processed by cluster"
+    
+    - name: "cluster_request_duration_seconds"
+      type: "histogram"
+      help: "Request duration in seconds"
+    
+    - name: "sync_tasks_total"
+      type: "counter"
+      help: "Total number of sync tasks"
+    
+    - name: "sync_tasks_failed"
+      type: "counter"
+      help: "Number of failed sync tasks"
+
+# 日志配置
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  
+  # 集群相关日志
+  cluster_logs:
+    enabled: true
+    level: "info"
+    file: "logs/cluster.log"
+    max_size: "100MB"
+    max_backups: 5
+    max_age: 30

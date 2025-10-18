@@ -1,0 +1,450 @@
+version: '3.8'
+
+# Zervigo Future 微服务部署配置
+# 排除认证服务，按正确时序部署微服务
+# 作者: AI Assistant
+# 日期: 2025-10-18
+
+services:
+  # ===========================================
+  # 基础设施层 (Infrastructure Layer)
+  # ===========================================
+  
+  # MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: jobfirst-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: jobfirst_password_2024
+      MYSQL_DATABASE: jobfirst
+      MYSQL_USER: jobfirst
+      MYSQL_PASSWORD: jobfirst_password_2024
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pjobfirst_password_2024"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # PostgreSQL数据库 (AI服务专用)
+  postgres:
+    image: postgres:15
+    container_name: jobfirst-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jobfirst_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: jobfirst-redis
+    restart: unless-stopped
+    command: redis-server --requirepass redis_password_2024
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Neo4j图数据库
+  neo4j:
+    image: neo4j:5.15
+    container_name: jobfirst-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/neo4j_password_2024
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4j_password_2024", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # Consul服务发现
+  consul:
+    image: consul:1.16
+    container_name: jobfirst-consul
+    restart: unless-stopped
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -bind=0.0.0.0
+    ports:
+      - "8500:8500"
+    volumes:
+      - consul_data:/consul/data
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ===========================================
+  # 网关层 (Gateway Layer)
+  # ===========================================
+  
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: api-gateway
+    container_name: jobfirst-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=jobfirst
+      - DB_USER=jobfirst
+      - DB_PASSWORD=jobfirst_password_2024
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_password_2024
+    depends_on:
+      consul:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ===========================================
+  # 认证授权层 (Authentication Layer)
+  # ===========================================
+  
+  # User Service (用户服务)
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: user-service
+    container_name: jobfirst-user-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=jobfirst
+      - DB_USER=jobfirst
+      - DB_PASSWORD=jobfirst_password_2024
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_password_2024
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ===========================================
+  # 业务服务层 (Business Service Layer)
+  # ===========================================
+  
+  # Resume Service (简历服务)
+  resume-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: resume-service
+    container_name: jobfirst-resume-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=jobfirst
+      - DB_USER=jobfirst
+      - DB_PASSWORD=jobfirst_password_2024
+      - USER_SERVICE_URL=http://user-service:8081
+    depends_on:
+      user-service:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Company Service (公司服务)
+  company-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: company-service
+    container_name: jobfirst-company-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=jobfirst
+      - DB_USER=jobfirst
+      - DB_PASSWORD=jobfirst_password_2024
+      - USER_SERVICE_URL=http://user-service:8081
+    depends_on:
+      user-service:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Job Service (职位服务)
+  job-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: job-service
+    container_name: jobfirst-job-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=jobfirst
+      - DB_USER=jobfirst
+      - DB_PASSWORD=jobfirst_password_2024
+      - USER_SERVICE_URL=http://user-service:8081
+    depends_on:
+      user-service:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ===========================================
+  # AI服务层 (AI Service Layer)
+  # ===========================================
+  
+  # AI Service (AI服务)
+  ai-service:
+    build:
+      context: ./ai-services/ai-service
+      dockerfile: Dockerfile
+    container_name: jobfirst-ai-service
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    environment:
+      - CONSUL_ADDR=consul:8500
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=jobfirst_ai
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_password_2024
+      - USER_SERVICE_URL=http://user-service:8081
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    depends_on:
+      user-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # ===========================================
+  # 反向代理层 (Reverse Proxy Layer)
+  # ===========================================
+  
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: jobfirst-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api-gateway
+      - user-service
+      - resume-service
+      - company-service
+      - job-service
+      - ai-service
+    networks:
+      - jobfirst-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+# ===========================================
+# 网络配置
+# ===========================================
+networks:
+  jobfirst-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ===========================================
+# 数据卷配置
+# ===========================================
+volumes:
+  mysql_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  consul_data:
+    driver: local
+  nginx_logs:
+    driver: local

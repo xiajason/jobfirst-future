@@ -1,0 +1,81 @@
+{
+  "server_ip": "101.33.251.158",
+  "server_user": "ubuntu",
+  "ssh_key_path": "~/.ssh/basic.pem",
+  "project_dir": "/opt/jobfirst",
+  "timeout": 10,
+  "verbose": false,
+  "version": "3.1.1",
+  "services": {
+    "refactored": {
+      "template-service": {
+        "port": 8085,
+        "description": "模板管理服务 - 支持评分、搜索、统计",
+        "health_path": "/health"
+      },
+      "statistics-service": {
+        "port": 8086,
+        "description": "数据统计服务 - 系统分析和趋势监控",
+        "health_path": "/health"
+      },
+      "banner-service": {
+        "port": 8087,
+        "description": "内容管理服务 - Banner、Markdown、评论",
+        "health_path": "/health"
+      }
+    },
+    "core": {
+      "basic-server": {
+        "port": 8080,
+        "description": "基础服务器 - API网关",
+        "health_path": "/health"
+      },
+      "user-service": {
+        "port": 8081,
+        "description": "用户管理服务",
+        "health_path": "/health"
+      },
+      "company-service": {
+        "port": 8083,
+        "description": "公司管理服务",
+        "health_path": "/health"
+      },
+      "dev-team-service": {
+        "port": 8088,
+        "description": "开发团队管理服务",
+        "health_path": "/health"
+      }
+    },
+    "business": {
+      "resume-service": {
+        "port": 8082,
+        "description": "简历管理服务",
+        "health_path": "/health"
+      },
+      "notification-service": {
+        "port": 8084,
+        "description": "通知服务",
+        "health_path": "/health"
+      }
+    },
+    "infrastructure": {
+      "mysql": {
+        "port": 3306,
+        "description": "MySQL数据库服务"
+      },
+      "redis": {
+        "port": 6379,
+        "description": "Redis缓存服务"
+      },
+      "consul": {
+        "port": 8500,
+        "description": "Consul服务发现",
+        "health_path": "/v1/status/leader"
+      },
+      "nginx": {
+        "port": 80,
+        "description": "Nginx反向代理"
+      }
+    }
+  }
+}

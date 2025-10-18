@@ -1,0 +1,235 @@
+# JobFirst Redis缓存升级脚本
+# 版本: V3.0 -> V4.0
+# 日期: 2025年1月6日
+# 描述: 为Redis数据库添加多级缓存策略和实时数据支持
+
+# ==============================================
+# 清理现有缓存数据
+# ==============================================
+
+# 清理旧的缓存数据
+DEL cache:user:*
+DEL cache:resume:*
+DEL cache:job:*
+DEL cache:recommendations:*
+DEL cache:similar:*
+
+# ==============================================
+# 多级缓存策略配置
+# ==============================================
+
+# 1. 用户会话管理
+# 设置会话超时时间
+CONFIG SET timeout 3600
+
+# 2. 业务数据缓存配置
+# 用户信息缓存 - 30分钟
+SET cache:config:user:ttl 1800
+# 简历数据缓存 - 1小时
+SET cache:config:resume:ttl 3600
+# 职位数据缓存 - 30分钟
+SET cache:config:job:ttl 1800
+# 推荐数据缓存 - 1小时
+SET cache:config:recommendations:ttl 3600
+# 相似度数据缓存 - 2小时
+SET cache:config:similar:ttl 7200
+
+# ==============================================
+# 缓存数据结构设计
+# ==============================================
+
+# 1. 用户信息缓存示例
+HSET cache:user:1 name "张三" email "zhangsan@example.com" phone "13800138001" last_login "2025-01-06T10:30:00Z"
+EXPIRE cache:user:1 1800
+
+# 2. 简历数据缓存示例
+HSET cache:resume:1 title "前端开发工程师简历" summary "5年前端开发经验" content "..." view_count 100
+EXPIRE cache:resume:1 3600
+
+# 3. 职位数据缓存示例
+HSET cache:job:1 title "前端开发工程师" company "腾讯科技" location "深圳" salary_min 15000 salary_max 25000
+EXPIRE cache:job:1 1800
+
+# ==============================================
+# AI推荐缓存结构
+# ==============================================
+
+# 1. 用户职位推荐缓存
+ZADD cache:recommendations:user:1 0.95 123 0.87 456 0.82 789
+EXPIRE cache:recommendations:user:1 3600
+
+# 2. 用户企业推荐缓存
+ZADD cache:company_recommendations:user:1 0.92 1 0.88 2 0.85 3
+EXPIRE cache:company_recommendations:user:1 3600
+
+# 3. 相似简历缓存
+ZADD cache:similar:resume:1 0.95 2 0.88 3 0.82 4
+EXPIRE cache:similar:resume:1 7200
+
+# 4. 相似职位缓存
+ZADD cache:similar:job:1 0.92 2 0.85 3 0.78 4
+EXPIRE cache:similar:job:1 7200
+
+# ==============================================
+# 实时统计数据
+# ==============================================
+
+# 1. 简历浏览量统计
+INCR stats:resume:views:1
+INCR stats:resume:views:2
+INCR stats:resume:views:3
+
+# 2. 职位浏览量统计
+INCR stats:job:views:1
+INCR stats:job:views:2
+INCR stats:job:views:3
+
+# 3. 用户活跃度统计
+INCR stats:user:active:1
+INCR stats:user:active:2
+INCR stats:user:active:3
+
+# 4. 排行榜数据
+ZADD leaderboard:resume:views 100 1 95 2 90 3
+ZADD leaderboard:job:views 150 1 140 2 130 3
+ZADD leaderboard:user:active 50 1 45 2 40 3
+
+# ==============================================
+# 用户行为日志
+# ==============================================
+
+# 1. 用户行为日志列表
+LPUSH user:actions:1 "view_resume:123:2025-01-06T10:30:00Z"
+LPUSH user:actions:1 "apply_job:456:2025-01-06T11:15:00Z"
+LPUSH user:actions:1 "search:前端开发:2025-01-06T12:00:00Z"
+
+# 2. 限制行为日志数量（保留最近100条）
+LTRIM user:actions:1 0 99
+
+# 3. 设置行为日志过期时间（7天）
+EXPIRE user:actions:1 604800
+
+# ==============================================
+# 用户技能标签
+# ==============================================
+
+# 1. 用户技能集合
+SADD user:skills:1 "JavaScript" "React" "Node.js" "Python" "MySQL"
+SADD user:skills:2 "Java" "Spring" "MySQL" "Redis" "Docker"
+SADD user:skills:3 "Python" "Django" "PostgreSQL" "Redis" "AWS"
+
+# 2. 技能流行度统计
+INCR skill:popularity:JavaScript
+INCR skill:popularity:React
+INCR skill:popularity:Node.js
+INCR skill:popularity:Python
+INCR skill:popularity:Java
+INCR skill:popularity:MySQL
+INCR skill:popularity:Redis
+
+# ==============================================
+# 消息队列
+# ==============================================
+
+# 1. AI分析任务队列
+LPUSH queue:ai:analysis '{"user_id": 1, "resume_id": 123, "type": "skill_analysis"}'
+LPUSH queue:ai:analysis '{"user_id": 2, "resume_id": 456, "type": "content_optimization"}'
+
+# 2. 推荐更新任务队列
+LPUSH queue:recommendation:update '{"user_id": 1, "type": "job_recommendations"}'
+LPUSH queue:recommendation:update '{"user_id": 2, "type": "company_recommendations"}'
+
+# 3. 数据同步任务队列
+LPUSH queue:sync:data '{"table": "users", "action": "update", "id": 1}'
+LPUSH queue:sync:data '{"table": "resumes", "action": "create", "id": 123}'
+
+# ==============================================
+# 用户在线状态
+# ==============================================
+
+# 1. 用户在线状态位图
+SETBIT online:users 1 1
+SETBIT online:users 2 1
+SETBIT online:users 3 0
+
+# 2. 用户最后活跃时间
+HSET user:last_active 1 "2025-01-06T10:30:00Z"
+HSET user:last_active 2 "2025-01-06T10:25:00Z"
+HSET user:last_active 3 "2025-01-06T09:45:00Z"
+
+# ==============================================
+# 缓存预热数据
+# ==============================================
+
+# 1. 热门简历缓存预热
+HSET cache:resume:hot:1 title "热门简历1" summary "5年前端经验" view_count 1000
+HSET cache:resume:hot:2 title "热门简历2" summary "3年Java经验" view_count 800
+HSET cache:resume:hot:3 title "热门简历3" summary "2年Python经验" view_count 600
+
+# 2. 热门职位缓存预热
+HSET cache:job:hot:1 title "前端开发工程师" company "腾讯科技" view_count 500
+HSET cache:job:hot:2 title "Java开发工程师" company "阿里巴巴" view_count 450
+HSET cache:job:hot:3 title "Python开发工程师" company "字节跳动" view_count 400
+
+# 3. 热门企业缓存预热
+HSET cache:company:hot:1 name "腾讯科技" industry "互联网" job_count 100
+HSET cache:company:hot:2 name "阿里巴巴" industry "电商" job_count 80
+HSET cache:company:hot:3 name "字节跳动" industry "互联网" job_count 60
+
+# ==============================================
+# 缓存监控和统计
+# ==============================================
+
+# 1. 缓存命中率统计
+SET cache:stats:hits 0
+SET cache:stats:misses 0
+
+# 2. 缓存大小统计
+SET cache:stats:size:users 0
+SET cache:stats:size:resumes 0
+SET cache:stats:size:jobs 0
+
+# 3. 缓存性能统计
+SET cache:stats:avg_response_time 0
+SET cache:stats:max_response_time 0
+
+# ==============================================
+# 缓存清理策略
+# ==============================================
+
+# 1. 设置缓存清理策略
+CONFIG SET maxmemory-policy allkeys-lru
+
+# 2. 设置最大内存限制（根据实际情况调整）
+# CONFIG SET maxmemory 1gb
+
+# ==============================================
+# 缓存健康检查
+# ==============================================
+
+# 1. 检查Redis连接
+PING
+
+# 2. 检查内存使用情况
+INFO memory
+
+# 3. 检查键数量
+DBSIZE
+
+# 4. 检查慢查询
+SLOWLOG GET 10
+
+# ==============================================
+# 缓存升级完成
+# ==============================================
+
+# 记录升级完成时间
+SET cache:upgrade:completed "2025-01-06T13:00:00Z"
+
+# 设置升级版本
+SET cache:version "V4.0"
+
+# 显示升级完成信息
+ECHO "Redis缓存升级完成！"
+ECHO "版本: V3.0 -> V4.0"
+ECHO "新增功能: 多级缓存策略、实时数据、消息队列、用户行为日志"

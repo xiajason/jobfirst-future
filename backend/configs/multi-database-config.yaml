@@ -1,0 +1,33 @@
+# 多数据库连接池配置
+mysql:
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: ""  # 根据实际情况配置
+  database: "jobfirst"
+  charset: "utf8mb4"
+
+postgresql:
+  host: "localhost"
+  port: 5432
+  user: "szjason72"
+  password: ""  # 根据实际情况配置
+  database: "jobfirst_vector"
+  ssl_mode: "disable"
+
+neo4j:
+  uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "jobfirst_password_2024"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+# 连接池通用配置
+max_idle_conns: 10
+max_open_conns: 100
+conn_max_lifetime: "1h"
+conn_max_idle_time: "30m"

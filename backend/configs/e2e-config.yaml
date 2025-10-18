@@ -1,0 +1,121 @@
+# JobFirst E2E Test Configuration
+
+# 环境配置
+environment: e2e-test
+version: "1.0.0"
+mode: "e2e-test"
+
+# 服务器配置
+server:
+  port: "8081"  # 使用不同端口避免冲突
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+  max_header_bytes: 1048576
+
+# 数据库配置 (E2E测试专用数据库)
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: "3306"
+  name: "jobfirst_e2e_test"  # E2E测试专用数据库
+  user: "root"
+  password: ""
+  charset: "utf8mb4"
+  parse_time: true
+  loc: "Local"
+  max_open_conns: 50
+  max_idle_conns: 5
+  conn_max_lifetime: 1800s
+
+# Redis配置 (E2E测试专用)
+redis:
+  host: "localhost"
+  port: "6379"
+  password: ""
+  db: 1  # 使用不同的数据库避免冲突
+  pool_size: 5
+  min_idle_conns: 2
+  max_retries: 3
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+# JWT配置
+jwt:
+  secret: "jobfirst-e2e-test-secret-key-2024"
+  expires_in: 1h  # E2E测试使用较短的过期时间
+  refresh_expires_in: 24h
+  issuer: "jobfirst-e2e-test"
+
+# 文件上传配置
+upload:
+  max_size: 10485760  # 10MB
+  allowed_types: ["pdf", "doc", "docx", "jpg", "jpeg", "png"]
+  upload_dir: "./uploads/e2e-test"
+  temp_dir: "./temp/e2e-test"
+
+# 日志配置
+logging:
+  level: "debug"  # E2E测试使用debug级别
+  format: "json"
+  output: "stdout"
+  file: "./logs/e2e-test.log"
+  max_size: 50
+  max_age: 7
+  max_backups: 3
+
+# 缓存配置
+cache:
+  default_ttl: 300s  # E2E测试使用较短的缓存时间
+  user_session_ttl: 600s
+  resume_data_ttl: 300s
+  template_data_ttl: 600s
+
+# 安全配置
+security:
+  bcrypt_cost: 4  # E2E测试使用较低的加密成本
+  rate_limit: 1000  # E2E测试使用更高的限制
+  rate_limit_window: 1m
+  cors_origins: ["*"]
+  cors_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  cors_headers: ["Origin", "Content-Type", "Accept", "Authorization", "API-Version", "X-Requested-With", "X-API-Key", "X-Client-Version"]
+
+# 积分系统配置
+points:
+  default_balance: 1000  # E2E测试使用更高的初始积分
+  resume_create_reward: 10
+  resume_share_reward: 5
+  template_use_cost: 2
+  file_upload_cost: 1
+
+# AI功能配置
+ai:
+  enabled: false  # E2E测试暂时禁用AI功能
+  service_url: "http://localhost:8206"
+  api_key: ""
+  timeout: 30s
+  max_retries: 3
+
+# 监控配置
+monitoring:
+  enabled: false  # E2E测试禁用监控
+  metrics_port: "9091"
+  health_check_interval: 30s
+  prometheus_enabled: false
+
+# Consul服务发现配置
+consul:
+  enabled: false  # E2E测试禁用Consul
+  host: "localhost"
+  port: "8500"
+  scheme: "http"
+  datacenter: "dc1"
+  token: ""
+  service_name: "basic-server-e2e"
+  service_id: "basic-server-e2e-1"
+  service_tags: ["api", "gateway", "basic", "e2e-test"]
+  health_check_url: "/health"
+  health_check_interval: "10s"
+  health_check_timeout: "5s"
+  deregister_after: "30s"

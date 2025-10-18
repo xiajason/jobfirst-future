@@ -1,0 +1,81 @@
+services:
+  user-service:
+    name: "user-service"
+    version: "3.0.0"
+    port: 8602
+    host: "127.0.0.1"
+    tags: ["user", "auth", "rbac"]
+    health_path: "/health"
+    api_prefix: "/api/v1"
+    
+  resume-service:
+    name: "resume-service"
+    version: "3.0.0"
+    port: 8603
+    host: "127.0.0.1"
+    tags: ["resume", "document", "analysis", "mineru"]
+    health_path: "/health"
+    api_prefix: "/api/v1/resume"
+    
+  company-service:
+    name: "company-service"
+    version: "3.0.0"
+    port: 8604
+    host: "127.0.0.1"
+    tags: ["company", "business", "verification"]
+    health_path: "/health"
+    api_prefix: "/api/v1/company"
+    
+  job-service:
+    name: "job-service"
+    version: "3.0.0"
+    port: 8609
+    host: "127.0.0.1"
+    tags: ["job", "position", "matching"]
+    health_path: "/health"
+    api_prefix: "/api/v1/job"
+    
+  notification-service:
+    name: "notification-service"
+    version: "3.0.0"
+    port: 8605
+    host: "127.0.0.1"
+    tags: ["notification", "message", "alert"]
+    health_path: "/health"
+    api_prefix: "/api/v1/notification"
+    
+  template-service:
+    name: "template-service"
+    version: "3.0.0"
+    port: 8611
+    host: "127.0.0.1"
+    tags: ["template", "document", "content"]
+    health_path: "/health"
+    api_prefix: "/api/v1/template"
+    
+  statistics-service:
+    name: "statistics-service"
+    version: "3.0.0"
+    port: 8606
+    host: "127.0.0.1"
+    tags: ["statistics", "analytics", "metrics"]
+    health_path: "/health"
+    api_prefix: "/api/v1/statistics"
+    
+  banner-service:
+    name: "banner-service"
+    version: "3.0.0"
+    port: 8612
+    host: "127.0.0.1"
+    tags: ["content", "banner", "markdown", "comment"]
+    health_path: "/health"
+    api_prefix: "/api/v1/banner"
+    
+  dev-team-service:
+    name: "dev-team-service"
+    version: "3.0.0"
+    port: 8613
+    host: "127.0.0.1"
+    tags: ["dev-team", "admin", "rbac"]
+    health_path: "/health"
+    api_prefix: "/api/v1/dev-team"

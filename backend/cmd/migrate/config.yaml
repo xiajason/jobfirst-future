@@ -1,0 +1,162 @@
+# 数据迁移配置文件
+database:
+  source:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "password"
+    database: "jobfirst"
+    charset: "utf8mb4"
+    parse_time: true
+    loc: "Local"
+  
+  target:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "password"
+    database: "jobfirst"
+    charset: "utf8mb4"
+    parse_time: true
+    loc: "Local"
+
+# 迁移选项
+migration:
+  # 是否备份源数据库
+  backup_source: true
+  
+  # 是否验证迁移结果
+  validate_result: true
+  
+  # 批处理大小
+  batch_size: 100
+  
+  # 是否跳过已存在的记录
+  skip_existing: true
+  
+  # 是否启用详细日志
+  verbose_logging: true
+
+# 技能分类映射
+skill_categories:
+  "前端开发":
+    - "react"
+    - "vue"
+    - "angular"
+    - "javascript"
+    - "typescript"
+    - "html"
+    - "css"
+    - "sass"
+    - "less"
+    - "webpack"
+    - "vite"
+    - "next.js"
+    - "nuxt.js"
+  
+  "后端开发":
+    - "go"
+    - "golang"
+    - "java"
+    - "python"
+    - "node.js"
+    - "php"
+    - "ruby"
+    - "c#"
+    - "spring"
+    - "django"
+    - "flask"
+    - "express"
+    - "gin"
+    - "echo"
+  
+  "数据库":
+    - "mysql"
+    - "postgresql"
+    - "mongodb"
+    - "redis"
+    - "elasticsearch"
+    - "sql"
+    - "nosql"
+    - "oracle"
+    - "sqlite"
+  
+  "运维部署":
+    - "docker"
+    - "kubernetes"
+    - "aws"
+    - "azure"
+    - "gcp"
+    - "jenkins"
+    - "gitlab"
+    - "ci/cd"
+    - "linux"
+    - "nginx"
+    - "apache"
+  
+  "设计":
+    - "photoshop"
+    - "illustrator"
+    - "figma"
+    - "sketch"
+    - "ui"
+    - "ux"
+    - "design"
+    - "adobe"
+
+# 热门技能列表
+popular_skills:
+  - "react"
+  - "vue"
+  - "javascript"
+  - "typescript"
+  - "python"
+  - "java"
+  - "go"
+  - "golang"
+  - "mysql"
+  - "postgresql"
+  - "redis"
+  - "docker"
+  - "kubernetes"
+  - "aws"
+  - "git"
+  - "html"
+  - "css"
+  - "node.js"
+  - "spring"
+  - "django"
+  - "flask"
+  - "mongodb"
+
+# 数据转换规则
+conversion_rules:
+  # 简历状态映射
+  resume_status:
+    "draft": "draft"
+    "published": "published"
+    "archived": "archived"
+  
+  # 可见性映射
+  visibility:
+    "public": "public"
+    "friends": "friends"
+    "private": "private"
+  
+  # 技能熟练度映射
+  skill_levels:
+    "beginner": "beginner"
+    "初级": "beginner"
+    "intermediate": "intermediate"
+    "中级": "intermediate"
+    "advanced": "advanced"
+    "高级": "advanced"
+    "expert": "expert"
+    "专家": "expert"
+  
+  # 项目状态映射
+  project_status:
+    "planning": "planning"
+    "in_progress": "in_progress"
+    "completed": "completed"
+    "cancelled": "cancelled"

@@ -1,0 +1,89 @@
+# 联邦式架构Zervigo服务数据库配置
+federated_database:
+  # Zervigo本地化数据库配置
+  zervigo_local:
+    mysql:
+      host: "localhost"
+      port: 3306
+      database: "jobfirst"
+      username: "root"
+      password: ""
+      service_type: "homebrew"
+      purpose: "核心业务数据"
+    
+    postgresql:
+      host: "localhost"
+      port: 5432
+      database: "jobfirst_vector"
+      username: "postgres"
+      password: ""
+      service_type: "homebrew"
+      purpose: "AI服务数据"
+    
+    redis:
+      host: "localhost"
+      port: 6379
+      password: ""
+      service_type: "homebrew"
+      purpose: "缓存和会话"
+    
+    neo4j:
+      host: "localhost"
+      port: 7687
+      username: "neo4j"
+      password: "neo4j"
+      service_type: "homebrew"
+      purpose: "图数据库"
+
+  # LoomaCRM-AI容器化数据库配置
+  looma_containerized:
+    postgresql:
+      host: "localhost"
+      port: 5434
+      database: "looma_independent"
+      username: "looma_user"
+      password: "looma_password"
+      service_type: "docker"
+      purpose: "CRM业务数据"
+    
+    mongodb:
+      host: "localhost"
+      port: 27018
+      database: "looma_independent"
+      username: "looma_admin"
+      password: "looma_admin_password"
+      service_type: "docker"
+      purpose: "文档存储"
+    
+    redis:
+      host: "localhost"
+      port: 6382
+      password: "looma_independent_password"
+      service_type: "docker"
+      purpose: "独立缓存"
+
+  # 跨系统数据同步配置
+  cross_system_sync:
+    user_sync:
+      source: "zervigo_local.mysql"
+      target: "looma_containerized.postgresql"
+      frequency: "realtime"
+      fields: ["id", "username", "email", "created_at"]
+    
+    resume_sync:
+      source: "zervigo_local.mysql"
+      target: "looma_containerized.mongodb"
+      frequency: "realtime"
+      fields: ["id", "user_id", "content", "metadata"]
+    
+    ai_analysis_sync:
+      source: "zervigo_local.postgresql"
+      target: "looma_containerized.elasticsearch"
+      frequency: "batch"
+      fields: ["resume_id", "analysis_result", "confidence_score"]
+    
+    cache_sync:
+      source: "zervigo_local.redis"
+      target: "looma_containerized.redis"
+      frequency: "realtime"
+      patterns: ["user:*", "session:*", "ai_cache:*"]

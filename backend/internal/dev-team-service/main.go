@@ -1,0 +1,105 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/consul/api"
+	"github.com/jobfirst/jobfirst-core"
+)
+
+func main() {
+	// 设置进程名称
+	if len(os.Args) > 0 {
+		os.Args[0] = "dev-team-service"
+	}
+
+	// 初始化JobFirst核心包
+	core, err := jobfirst.NewCore("../../configs/jobfirst-core-config.yaml")
+	if err != nil {
+		log.Fatalf("初始化JobFirst核心包失败: %v", err)
+	}
+	defer core.Close()
+
+	// 设置Gin模式
+	gin.SetMode(gin.ReleaseMode)
+
+	// 创建Gin路由器
+	r := gin.Default()
+
+	// 添加健康检查端点
+	r.GET("/health", healthCheck)
+	r.GET("/info", serviceInfo)
+
+	// 注册到Consul
+	registerToConsul("dev-team-service", "127.0.0.1", 7538)
+
+	// 启动服务
+	log.Println("Starting Dev Team Service with jobfirst-core on 0.0.0.0:7538")
+	if err := r.Run(":7538"); err != nil {
+		log.Fatalf("Dev Team Service启动失败: %v", err)
+	}
+}
+
+func registerToConsul(serviceName, serviceHost string, servicePort int) {
+	// 创建Consul客户端
+	config := api.DefaultConfig()
+	config.Address = "localhost:8500"
+	client, err := api.NewClient(config)
+	if err != nil {
+		log.Printf("创建Consul客户端失败: %v", err)
+		return
+	}
+
+	// 服务注册信息
+	registration := &api.AgentServiceRegistration{
+		ID:      fmt.Sprintf("%s-%d", serviceName, servicePort),
+		Name:    serviceName,
+		Address: serviceHost,
+		Port:    servicePort,
+		Check: &api.AgentServiceCheck{
+			HTTP:                           fmt.Sprintf("http://%s:%d/health", serviceHost, servicePort),
+			Interval:                       "10s",
+			Timeout:                        "3s",
+			DeregisterCriticalServiceAfter: "30s",
+		},
+		Tags: []string{"dev-team", "microservice"},
+		Meta: map[string]string{
+			"version":     "3.1.0",
+			"environment": "production",
+			"port":        "7538",
+		},
+	}
+
+	// 注册服务
+	if err := client.Agent().ServiceRegister(registration); err != nil {
+		log.Printf("注册服务到Consul失败: %v", err)
+	} else {
+		log.Printf("服务 %s 已注册到Consul: %s:%d", serviceName, serviceHost, servicePort)
+	}
+}
+
+// 健康检查端点
+func healthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "healthy",
+		"service":   "dev-team-service",
+		"timestamp": time.Now().Format(time.RFC3339),
+		"version":   "3.1.0",
+	})
+}
+
+// 服务信息端点
+func serviceInfo(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"service":   "dev-team-service",
+		"version":   "3.1.0",
+		"port":      7538,
+		"status":    "running",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}

@@ -1,0 +1,17 @@
+{
+  "database.mysql.database": "jobfirst",
+  "database.mysql.host": "192.168.1.100",
+  "database.mysql.password": "",
+  "database.mysql.port": 3306,
+  "database.mysql.username": "root",
+  "database.redis.host": "localhost",
+  "database.redis.password": "",
+  "database.redis.port": 6379,
+  "security.jwt_secret": "default-secret",
+  "security.token_expiry": 3600,
+  "service.api_gateway.port": 8080,
+  "service.resume_service.port": 8082,
+  "service.user_service.port": 8081,
+  "system.debug": false,
+  "system.log_level": "debug"
+}

@@ -1,0 +1,220 @@
+{
+  "overall_health": 0.79,
+  "startup_status": {
+    "overall_status": "success",
+    "recommendations": [],
+    "services": [
+      {
+        "description": "服务发现和配置中心",
+        "health_status": "healthy",
+        "name": "consul",
+        "port": 8500,
+        "priority": 1,
+        "status": "active"
+      },
+      {
+        "description": "主数据库",
+        "health_status": "healthy",
+        "name": "mysql",
+        "port": 3306,
+        "priority": 2,
+        "status": "active"
+      },
+      {
+        "description": "缓存服务",
+        "health_status": "healthy",
+        "name": "redis",
+        "port": 6379,
+        "priority": 3,
+        "status": "active"
+      },
+      {
+        "description": "AI服务数据库",
+        "health_status": "healthy",
+        "name": "postgresql",
+        "port": 5432,
+        "priority": 4,
+        "status": "active"
+      },
+      {
+        "description": "反向代理",
+        "health_status": "healthy",
+        "name": "nginx",
+        "port": 80,
+        "priority": 5,
+        "status": "active"
+      },
+      {
+        "description": "API网关",
+        "health_status": "healthy",
+        "name": "api_gateway",
+        "port": 8080,
+        "priority": 10,
+        "status": "active"
+      },
+      {
+        "description": "用户管理服务",
+        "health_status": "healthy",
+        "name": "user_service",
+        "port": 8081,
+        "priority": 11,
+        "status": "active"
+      },
+      {
+        "description": "简历管理服务",
+        "health_status": "healthy",
+        "name": "resume_service",
+        "port": 8082,
+        "priority": 12,
+        "status": "active"
+      },
+      {
+        "description": "公司管理服务",
+        "health_status": "healthy",
+        "name": "company_service",
+        "port": 8083,
+        "priority": 13,
+        "status": "active"
+      },
+      {
+        "description": "通知服务",
+        "health_status": "healthy",
+        "name": "notification_service",
+        "port": 8084,
+        "priority": 14,
+        "status": "active"
+      },
+      {
+        "description": "模板管理服务",
+        "health_status": "healthy",
+        "name": "template_service",
+        "port": 8085,
+        "priority": 20,
+        "status": "active"
+      },
+      {
+        "description": "数据统计服务",
+        "health_status": "healthy",
+        "name": "statistics_service",
+        "port": 8086,
+        "priority": 21,
+        "status": "active"
+      },
+      {
+        "description": "内容管理服务",
+        "health_status": "healthy",
+        "name": "banner_service",
+        "port": 8087,
+        "priority": 22,
+        "status": "active"
+      },
+      {
+        "description": "开发团队管理服务",
+        "health_status": "healthy",
+        "name": "dev_team_service",
+        "port": 8088,
+        "priority": 23,
+        "status": "active"
+      },
+      {
+        "description": "AI服务",
+        "health_status": "unknown",
+        "name": "ai_service",
+        "port": 8206,
+        "priority": 30,
+        "status": "inactive"
+      }
+    ],
+    "timestamp": "2025-09-12T18:18:14.266962+08:00",
+    "violations": []
+  },
+  "summary": {
+    "startup_violations": 0,
+    "team_violations": 4,
+    "total_violations": 4,
+    "user_violations": 0
+  },
+  "team_status": {
+    "overall_status": "critical",
+    "recommendations": [],
+    "role_distribution": {
+      "roles": [
+        {
+          "current_count": 1,
+          "name": "super_admin",
+          "required_count": 1,
+          "status": "ok"
+        },
+        {
+          "current_count": 0,
+          "name": "tech_lead",
+          "required_count": 1,
+          "status": "missing"
+        },
+        {
+          "current_count": 0,
+          "name": "backend_dev",
+          "required_count": 1,
+          "status": "missing"
+        },
+        {
+          "current_count": 0,
+          "name": "frontend_dev",
+          "required_count": 1,
+          "status": "missing"
+        },
+        {
+          "current_count": 0,
+          "name": "devops_engineer",
+          "required_count": 1,
+          "status": "missing"
+        }
+      ]
+    },
+    "team_composition": {
+      "active_members": 1,
+      "inactive_members": 0,
+      "total_members": 1
+    },
+    "timestamp": "2025-09-12T18:18:14.275736+08:00",
+    "violations": [
+      {
+        "message": "缺少关键角色 tech_lead",
+        "recommendation": "立即招聘或指定 tech_lead 角色",
+        "severity": "high",
+        "type": "role"
+      },
+      {
+        "message": "缺少关键角色 backend_dev",
+        "recommendation": "立即招聘或指定 backend_dev 角色",
+        "severity": "high",
+        "type": "role"
+      },
+      {
+        "message": "缺少关键角色 frontend_dev",
+        "recommendation": "立即招聘或指定 frontend_dev 角色",
+        "severity": "high",
+        "type": "role"
+      },
+      {
+        "message": "缺少关键角色 devops_engineer",
+        "recommendation": "立即招聘或指定 devops_engineer 角色",
+        "severity": "high",
+        "type": "role"
+      }
+    ]
+  },
+  "timestamp": "2025-09-12T18:18:14.2805+08:00",
+  "user_status": {
+    "overall_status": "success",
+    "recommendations": [],
+    "timestamp": "2025-09-12T18:18:14.278924+08:00",
+    "user_statistics": {
+      "active_users": 3,
+      "subscribed_users": 0,
+      "test_users": 0,
+      "total_users": 3
+    },
+    "violations": []
+  }
+}

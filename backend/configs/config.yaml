@@ -1,0 +1,121 @@
+# JobFirst Basic Version Configuration
+
+# 环境配置
+environment: development
+version: "1.0.0"
+mode: "basic"
+
+# 服务器配置
+server:
+  port: "7520"
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+  max_header_bytes: 1048576
+
+# 数据库配置 (本地MySQL)
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: "3306"
+  name: "jobfirst"
+  user: "root"
+  password: ""
+  charset: "utf8mb4"
+  parse_time: true
+  loc: "Local"
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 3600s
+
+# Redis配置 (本地Redis)
+redis:
+  host: "localhost"
+  port: "6379"
+  password: ""
+  db: 0
+  pool_size: 10
+  min_idle_conns: 5
+  max_retries: 3
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+# JWT配置
+jwt:
+  secret: "jobfirst-basic-secret-key-2024"
+  expires_in: 24h
+  refresh_expires_in: 168h
+  issuer: "jobfirst-basic"
+
+# 文件上传配置
+upload:
+  max_size: 10485760  # 10MB
+  allowed_types: ["pdf", "doc", "docx", "jpg", "jpeg", "png"]
+  upload_dir: "./uploads"
+  temp_dir: "./temp"
+
+# 日志配置
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  file: "./logs/basic-server.log"
+  max_size: 100
+  max_age: 30
+  max_backups: 10
+
+# 缓存配置
+cache:
+  default_ttl: 3600s
+  user_session_ttl: 7200s
+  resume_data_ttl: 1800s
+  template_data_ttl: 7200s
+
+# 安全配置
+security:
+  bcrypt_cost: 12
+  rate_limit: 100
+  rate_limit_window: 1m
+  cors_origins: ["*"]
+  cors_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  cors_headers: ["Origin", "Content-Type", "Accept", "Authorization", "API-Version", "X-Requested-With", "X-API-Key", "X-Client-Version"]
+
+# 积分系统配置
+points:
+  default_balance: 100
+  resume_create_reward: 10
+  resume_share_reward: 5
+  template_use_cost: 2
+  file_upload_cost: 1
+
+# AI功能配置
+ai:
+  enabled: true
+  service_url: "http://localhost:8206"
+  api_key: ""
+  timeout: 30s
+  max_retries: 3
+
+# 监控配置
+monitoring:
+  enabled: true
+  metrics_port: "9090"
+  health_check_interval: 30s
+  prometheus_enabled: true
+
+# Consul服务发现配置 (可选)
+consul:
+  enabled: false  # 默认禁用，作为基础服务不需要服务发现
+  host: "localhost"
+  port: "8500"
+  scheme: "http"
+  datacenter: "dc1"
+  token: ""
+  service_name: "basic-server"
+  service_id: "basic-server-1"
+  service_tags: ["api", "gateway", "basic"]
+  health_check_url: "/health"
+  health_check_interval: "10s"
+  health_check_timeout: "5s"
+  deregister_after: "30s"
