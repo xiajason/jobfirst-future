@@ -259,16 +259,16 @@ jobs:
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
             "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/bin,configs,logs,scripts}"
           
-          # 上传构建产物
-          scp -i ~/.ssh/alibaba_key backend-services/* \
-            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/backend/bin/
+          # 上传微服务代码和启动脚本
+          scp -i ~/.ssh/alibaba_key -r backend-services/* \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/backend/
           
           # 上传配置文件
-          scp -i ~/.ssh/alibaba_key -r zervigo_future/backend/configs/* \
+          scp -i ~/.ssh/alibaba_key -r backend-services/configs/* \
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/
           
           # 上传部署脚本
-          scp -i ~/.ssh/alibaba_key zervigo_future/scripts/*.sh \
+          scp -i ~/.ssh/alibaba_key scripts/*.sh \
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/scripts/
           
           echo "✅ 文件上传完成"
@@ -283,7 +283,7 @@ jobs:
           cd ${{ env.ALIBABA_DEPLOY_PATH }}
           
           # 给脚本执行权限
-          chmod +x backend/bin/*
+          chmod +x backend/scripts/services/*.sh
           chmod +x scripts/*.sh
           
           # 停止现有微服务
