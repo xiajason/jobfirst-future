@@ -6,7 +6,11 @@ on:
       - main      # 生产环境
       - develop   # 开发/测试环境
     paths:
-      - 'zervigo_future/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - 'docs/**'
+      - 'nginx/**'
+      - 'docker-compose*.yml'
       - '.github/workflows/zervigo-future-deploy.yml'
   
   workflow_dispatch:  # 允许手动触发
