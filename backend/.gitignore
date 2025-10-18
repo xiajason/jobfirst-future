@@ -1,0 +1,25 @@
+# 排除预编译二进制文件
+*.service
+api-gateway
+basic-server
+unified-auth
+migrate
+validate
+jobfirst-backend
+main_integrated
+multi-database-service
+service_registration_example
+zervigo
+
+# 排除开发文件
+*.log
+*.pid
+temp/
+logs/
+coverage.html
+
+# 排除大文件
+*.exe
+*.dll
+*.so
+*.dylib
