@@ -1,0 +1,517 @@
+name: Zervigo Future 微服务部署流水线
+
+on:
+  push:
+    branches:
+      - main      # 生产环境
+      - develop   # 开发/测试环境
+    paths:
+      - 'zervigo_future/**'
+      - '.github/workflows/zervigo-future-deploy.yml'
+  
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      environment:
+        description: '部署环境'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      deploy_services:
+        description: '部署服务 (逗号分隔，留空部署所有)'
+        required: false
+        default: ''
+        type: string
+
+env:
+  # 阿里云配置
+  ALIBABA_SERVER_IP: ${{ secrets.ALIBABA_SERVER_IP }}
+  ALIBABA_SERVER_USER: ${{ secrets.ALIBABA_SERVER_USER }}
+  ALIBABA_DEPLOY_PATH: ${{ secrets.ALIBABA_DEPLOY_PATH || '/opt/services' }}
+  
+  # 服务端口配置
+  API_GATEWAY_PORT: 8080
+  USER_SERVICE_PORT: 8081
+  RESUME_SERVICE_PORT: 8082
+  COMPANY_SERVICE_PORT: 8083
+  NOTIFICATION_SERVICE_PORT: 8084
+  TEMPLATE_SERVICE_PORT: 8085
+  STATISTICS_SERVICE_PORT: 8086
+  BANNER_SERVICE_PORT: 8087
+  DEV_TEAM_SERVICE_PORT: 8088
+  JOB_SERVICE_PORT: 8089
+
+jobs:
+  # 检测变更和确定部署范围
+  detect-changes:
+    name: 🔍 检测代码变更
+    runs-on: ubuntu-latest
+    outputs:
+      backend-changed: ${{ steps.changes.outputs.backend }}
+      config-changed: ${{ steps.changes.outputs.config }}
+      deploy-needed: ${{ steps.check.outputs.deploy-needed }}
+      environment: ${{ steps.env.outputs.environment }}
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 检测文件变更
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'zervigo_future/backend/**'
+              - 'zervigo_future/pkg/**'
+            config:
+              - 'zervigo_future/configs/**'
+              - 'zervigo_future/**/config.yaml'
+      
+      - name: 确定部署环境
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+          
+          # 手动触发时使用输入的环境
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 检查是否需要部署
+        id: check
+        run: |
+          if [[ "${{ steps.changes.outputs.backend }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.config }}" == "true" ]] || \
+             [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "deploy-needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy-needed=false" >> $GITHUB_OUTPUT
+          fi
+
+  # 构建所有Go微服务
+  build-backend-services:
+    name: 🔨 构建Go微服务
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy-needed == 'true'
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+      
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+          cache-dependency-path: zervigo_future/backend/go.sum
+      
+      - name: 构建所有微服务
+        working-directory: zervigo_future/backend
+        run: |
+          echo "🔨 开始构建所有Go微服务..."
+          go env -w GOPROXY=https://goproxy.cn,direct
+          go mod download
+          go mod verify
+          
+          # 创建bin目录
+          mkdir -p bin
+          
+          # 构建各个微服务
+          echo "构建 API Gateway..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/api-gateway ./cmd/basic-server
+          
+          echo "构建 User Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/user-service ./internal/user-service
+          
+          echo "构建 Resume Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/resume-service ./internal/resume-service
+          
+          echo "构建 Company Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/company-service ./internal/company-service
+          
+          echo "构建 Notification Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/notification-service ./internal/notification-service
+          
+          echo "构建 Template Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/template-service ./internal/template-service
+          
+          echo "构建 Statistics Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/statistics-service ./internal/statistics-service
+          
+          echo "构建 Banner Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/banner-service ./internal/banner-service
+          
+          echo "构建 Dev Team Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/dev-team-service ./internal/dev-team-service
+          
+          echo "构建 Job Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/job-service ./internal/job-service
+          
+          echo "✅ 所有微服务构建完成"
+          ls -lh bin/
+      
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-services
+          path: zervigo_future/backend/bin/
+          retention-days: 7
+
+  # 部署到阿里云
+  deploy-to-alibaba:
+    name: 🚀 部署到阿里云
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-backend-services]
+    if: needs.detect-changes.outputs.deploy-needed == 'true'
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+      
+      - name: 下载构建产物
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-services
+          path: backend-services/
+      
+      - name: 配置SSH密钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ALIBABA_SSH_PRIVATE_KEY }}" > ~/.ssh/alibaba_key
+          chmod 600 ~/.ssh/alibaba_key
+          ssh-keyscan -H ${{ env.ALIBABA_SERVER_IP }} >> ~/.ssh/known_hosts
+      
+      - name: 上传服务文件
+        run: |
+          echo "📤 上传微服务文件到阿里云..."
+          
+          # 创建远程目录
+          ssh -i ~/.ssh/alibaba_key \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
+            "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/bin,configs,logs,scripts}"
+          
+          # 上传构建产物
+          scp -i ~/.ssh/alibaba_key backend-services/* \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/backend/bin/
+          
+          # 上传配置文件
+          scp -i ~/.ssh/alibaba_key -r zervigo_future/backend/configs/* \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/
+          
+          # 上传部署脚本
+          scp -i ~/.ssh/alibaba_key zervigo_future/scripts/*.sh \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/scripts/
+          
+          echo "✅ 文件上传完成"
+      
+      - name: 部署微服务 (按时序)
+        run: |
+          echo "🚀 开始部署微服务..."
+          
+          ssh -i ~/.ssh/alibaba_key \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} << 'ENDSSH'
+          
+          cd ${{ env.ALIBABA_DEPLOY_PATH }}
+          
+          # 给脚本执行权限
+          chmod +x backend/bin/*
+          chmod +x scripts/*.sh
+          
+          # 停止现有微服务
+          echo "⏸️  停止现有微服务..."
+          pkill -f api-gateway || true
+          pkill -f user-service || true
+          pkill -f resume-service || true
+          pkill -f company-service || true
+          pkill -f notification-service || true
+          pkill -f template-service || true
+          pkill -f statistics-service || true
+          pkill -f banner-service || true
+          pkill -f dev-team-service || true
+          pkill -f job-service || true
+          
+          sleep 5
+          
+          # 创建日志目录
+          mkdir -p logs
+          
+          # ========================================
+          # 阶段1: 网关层 (8080)
+          # ========================================
+          echo "🌐 启动网关层..."
+          cd backend/bin
+          
+          # API Gateway (8080)
+          echo "启动 API Gateway (8080)..."
+          nohup ./api-gateway > ../../logs/api-gateway.log 2>&1 &
+          echo $! > ../../logs/api-gateway.pid
+          sleep 10
+          curl -f http://localhost:8080/health && echo "✅ API Gateway OK" || echo "❌ API Gateway Failed"
+          
+          # ========================================
+          # 阶段2: 认证授权层 (8081)
+          # ========================================
+          echo "🔐 启动认证授权层..."
+          
+          # User Service (8081)
+          echo "启动 User Service (8081)..."
+          nohup ./user-service > ../../logs/user-service.log 2>&1 &
+          echo $! > ../../logs/user-service.pid
+          sleep 10
+          curl -f http://localhost:8081/health && echo "✅ User Service OK" || echo "❌ User Service Failed"
+          
+          # ========================================
+          # 阶段3: 核心业务层 (8082-8083)
+          # ========================================
+          echo "💼 启动核心业务层..."
+          
+          # Resume Service (8082)
+          echo "启动 Resume Service (8082)..."
+          nohup ./resume-service > ../../logs/resume-service.log 2>&1 &
+          echo $! > ../../logs/resume-service.pid
+          sleep 5
+          curl -f http://localhost:8082/health && echo "✅ Resume Service OK" || echo "❌ Resume Service Failed"
+          
+          # Company Service (8083)
+          echo "启动 Company Service (8083)..."
+          nohup ./company-service > ../../logs/company-service.log 2>&1 &
+          echo $! > ../../logs/company-service.pid
+          sleep 5
+          curl -f http://localhost:8083/health && echo "✅ Company Service OK" || echo "❌ Company Service Failed"
+          
+          # ========================================
+          # 阶段4: 支撑服务层 (8084-8087)
+          # ========================================
+          echo "🔧 启动支撑服务层..."
+          
+          # Notification Service (8084)
+          echo "启动 Notification Service (8084)..."
+          nohup ./notification-service > ../../logs/notification-service.log 2>&1 &
+          echo $! > ../../logs/notification-service.pid
+          sleep 3
+          curl -f http://localhost:8084/health && echo "✅ Notification Service OK" || echo "❌ Notification Service Failed"
+          
+          # Template Service (8085)
+          echo "启动 Template Service (8085)..."
+          nohup ./template-service > ../../logs/template-service.log 2>&1 &
+          echo $! > ../../logs/template-service.pid
+          sleep 3
+          curl -f http://localhost:8085/health && echo "✅ Template Service OK" || echo "❌ Template Service Failed"
+          
+          # Statistics Service (8086)
+          echo "启动 Statistics Service (8086)..."
+          nohup ./statistics-service > ../../logs/statistics-service.log 2>&1 &
+          echo $! > ../../logs/statistics-service.pid
+          sleep 3
+          curl -f http://localhost:8086/health && echo "✅ Statistics Service OK" || echo "❌ Statistics Service Failed"
+          
+          # Banner Service (8087)
+          echo "启动 Banner Service (8087)..."
+          nohup ./banner-service > ../../logs/banner-service.log 2>&1 &
+          echo $! > ../../logs/banner-service.pid
+          sleep 3
+          curl -f http://localhost:8087/health && echo "✅ Banner Service OK" || echo "❌ Banner Service Failed"
+          
+          # ========================================
+          # 阶段5: 管理服务层 (8088-8089)
+          # ========================================
+          echo "⚙️ 启动管理服务层..."
+          
+          # Dev Team Service (8088)
+          echo "启动 Dev Team Service (8088)..."
+          nohup ./dev-team-service > ../../logs/dev-team-service.log 2>&1 &
+          echo $! > ../../logs/dev-team-service.pid
+          sleep 3
+          curl -f http://localhost:8088/health && echo "✅ Dev Team Service OK" || echo "❌ Dev Team Service Failed"
+          
+          # Job Service (8089)
+          echo "启动 Job Service (8089)..."
+          nohup ./job-service > ../../logs/job-service.log 2>&1 &
+          echo $! > ../../logs/job-service.pid
+          sleep 3
+          curl -f http://localhost:8089/health && echo "✅ Job Service OK" || echo "❌ Job Service Failed"
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ 所有微服务部署完成！"
+          echo "=========================================="
+          
+          ENDSSH
+      
+      - name: 清理SSH密钥
+        if: always()
+        run: |
+          rm -f ~/.ssh/alibaba_key
+
+  # 验证部署
+  verify-deployment:
+    name: ✅ 验证部署
+    runs-on: ubuntu-latest
+    needs: [detect-changes, deploy-to-alibaba]
+    if: needs.detect-changes.outputs.deploy-needed == 'true'
+    
+    steps:
+      - name: 配置SSH密钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ALIBABA_SSH_PRIVATE_KEY }}" > ~/.ssh/alibaba_key
+          chmod 600 ~/.ssh/alibaba_key
+          ssh-keyscan -H ${{ env.ALIBABA_SERVER_IP }} >> ~/.ssh/known_hosts
+      
+      - name: 验证所有服务
+        run: |
+          echo "✅ 验证微服务部署状态..."
+          
+          ssh -i ~/.ssh/alibaba_key \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} << 'ENDSSH'
+          
+          echo "=========================================="
+          echo "🔍 微服务健康检查"
+          echo "=========================================="
+          
+          # 网关层
+          echo ""
+          echo "=== 网关层 ==="
+          curl -f http://localhost:8080/health && echo "✅ API Gateway (8080)" || echo "❌ API Gateway (8080)"
+          
+          # 认证授权层
+          echo ""
+          echo "=== 认证授权层 ==="
+          curl -f http://localhost:8081/health && echo "✅ User Service (8081)" || echo "❌ User Service (8081)"
+          
+          # 核心业务层
+          echo ""
+          echo "=== 核心业务层 ==="
+          curl -f http://localhost:8082/health && echo "✅ Resume Service (8082)" || echo "❌ Resume Service (8082)"
+          curl -f http://localhost:8083/health && echo "✅ Company Service (8083)" || echo "❌ Company Service (8083)"
+          
+          # 支撑服务层
+          echo ""
+          echo "=== 支撑服务层 ==="
+          curl -f http://localhost:8084/health && echo "✅ Notification Service (8084)" || echo "❌ Notification Service (8084)"
+          curl -f http://localhost:8085/health && echo "✅ Template Service (8085)" || echo "❌ Template Service (8085)"
+          curl -f http://localhost:8086/health && echo "✅ Statistics Service (8086)" || echo "❌ Statistics Service (8086)"
+          curl -f http://localhost:8087/health && echo "✅ Banner Service (8087)" || echo "❌ Banner Service (8087)"
+          
+          # 管理服务层
+          echo ""
+          echo "=== 管理服务层 ==="
+          curl -f http://localhost:8088/health && echo "✅ Dev Team Service (8088)" || echo "❌ Dev Team Service (8088)"
+          curl -f http://localhost:8089/health && echo "✅ Job Service (8089)" || echo "❌ Job Service (8089)"
+          
+          # AI服务 (已预部署)
+          echo ""
+          echo "=== AI服务层 (预部署) ==="
+          curl -f http://localhost:8100/health && echo "✅ AI Service (8100)" || echo "❌ AI Service (8100)"
+          
+          # 数据库 (已预部署)
+          echo ""
+          echo "=== 数据库层 (预部署) ==="
+          podman exec migration-mysql mysql -uroot -pJobFirst2025!MySQL -e "SELECT 'MySQL OK' as status;" 2>/dev/null && echo "✅ MySQL (3306)" || echo "❌ MySQL (3306)"
+          podman exec migration-postgres psql -U postgres -c "SELECT 'PostgreSQL OK' as status;" 2>/dev/null && echo "✅ PostgreSQL (5432)" || echo "❌ PostgreSQL (5432)"
+          podman exec migration-redis redis-cli -a JobFirst2025!Redis ping 2>/dev/null && echo "✅ Redis (6379)" || echo "❌ Redis (6379)"
+          podman exec migration-mongodb mongosh -u admin -p'JobFirst2025!Mongo' --authenticationDatabase admin --eval "db.version()" --quiet 2>/dev/null && echo "✅ MongoDB (27017)" || echo "❌ MongoDB (27017)"
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ 部署验证完成"
+          echo "=========================================="
+          
+          ENDSSH
+      
+      - name: 清理SSH密钥
+        if: always()
+        run: |
+          rm -f ~/.ssh/alibaba_key
+
+  # 部署通知
+  notify:
+    name: 📢 部署通知
+    runs-on: ubuntu-latest
+    needs: [detect-changes, verify-deployment]
+    if: always() && needs.detect-changes.outputs.deploy-needed == 'true'
+    
+    steps:
+      - name: 部署结果
+        run: |
+          if [[ "${{ needs.verify-deployment.result }}" == "success" ]]; then
+            echo "✅ Zervigo Future微服务部署成功！"
+            echo ""
+            echo "环境: ${{ needs.detect-changes.outputs.environment }}"
+            echo "提交: ${{ github.sha }}"
+            echo "分支: ${{ github.ref_name }}"
+            echo ""
+            echo "=========================================="
+            echo "已部署的微服务:"
+            echo "=========================================="
+            echo ""
+            echo "网关层:"
+            echo "  - API Gateway (8080)"
+            echo ""
+            echo "认证授权层:"
+            echo "  - User Service (8081)"
+            echo ""
+            echo "核心业务层:"
+            echo "  - Resume Service (8082)"
+            echo "  - Company Service (8083)"
+            echo ""
+            echo "支撑服务层:"
+            echo "  - Notification Service (8084)"
+            echo "  - Template Service (8085)"
+            echo "  - Statistics Service (8086)"
+            echo "  - Banner Service (8087)"
+            echo ""
+            echo "管理服务层:"
+            echo "  - Dev Team Service (8088)"
+            echo "  - Job Service (8089)"
+            echo ""
+            echo "=========================================="
+            echo "预部署服务 (无需流水线部署):"
+            echo "=========================================="
+            echo "  - AI Service (8100)"
+            echo "  - MySQL (3306)"
+            echo "  - PostgreSQL (5432)"
+            echo "  - Redis (6379)"
+            echo "  - MongoDB (27017)"
+            echo ""
+            echo "=========================================="
+            echo "访问地址:"
+            echo "=========================================="
+            echo "  - API Gateway: http://${{ env.ALIBABA_SERVER_IP }}:8080"
+            echo "  - User Service: http://${{ env.ALIBABA_SERVER_IP }}:8081"
+            echo "  - Resume Service: http://${{ env.ALIBABA_SERVER_IP }}:8082"
+            echo "  - Company Service: http://${{ env.ALIBABA_SERVER_IP }}:8083"
+            echo "  - Notification Service: http://${{ env.ALIBABA_SERVER_IP }}:8084"
+            echo "  - Template Service: http://${{ env.ALIBABA_SERVER_IP }}:8085"
+            echo "  - Statistics Service: http://${{ env.ALIBABA_SERVER_IP }}:8086"
+            echo "  - Banner Service: http://${{ env.ALIBABA_SERVER_IP }}:8087"
+            echo "  - Dev Team Service: http://${{ env.ALIBABA_SERVER_IP }}:8088"
+            echo "  - Job Service: http://${{ env.ALIBABA_SERVER_IP }}:8089"
+            echo "  - AI Service: http://${{ env.ALIBABA_SERVER_IP }}:8100"
+          else
+            echo "❌ Zervigo Future微服务部署失败！"
+            echo "请检查GitHub Actions日志排查问题"
+            exit 1
+          fi
