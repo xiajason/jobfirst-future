@@ -71,11 +71,11 @@ jobs:
         with:
           filters: |
             backend:
-              - 'zervigo_future/backend/**'
-              - 'zervigo_future/pkg/**'
+              - 'backend/**'
+              - 'pkg/**'
             config:
-              - 'zervigo_future/configs/**'
-              - 'zervigo_future/**/config.yaml'
+              - 'configs/**'
+              - '**/config.yaml'
       
       - name: 确定部署环境
         id: env
