@@ -76,6 +76,8 @@ jobs:
             config:
               - 'configs/**'
               - '**/config.yaml'
+            workflow:
+              - '.github/workflows/**'
       
       - name: 确定部署环境
         id: env
@@ -98,6 +100,7 @@ jobs:
         run: |
           if [[ "${{ steps.changes.outputs.backend }}" == "true" ]] || \
              [[ "${{ steps.changes.outputs.config }}" == "true" ]] || \
+             [[ "${{ steps.changes.outputs.workflow }}" == "true" ]] || \
              [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "deploy-needed=true" >> $GITHUB_OUTPUT
           else
