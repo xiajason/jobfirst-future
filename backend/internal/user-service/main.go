@@ -109,15 +109,16 @@ func setupBusinessRoutes(r *gin.Engine, core *jobfirst.Core) {
 			}
 
 			// 使用核心包的认证管理器
-			user, err := core.AuthManager.Register(req)
+			resp, err := core.AuthManager.Register(req)
 			if err != nil {
 				standardErrorResponse(c, http.StatusBadRequest, "注册失败", err.Error())
 				return
 			}
 
 			standardSuccessResponse(c, gin.H{
-				"user_id":  user.ID,
-				"username": user.Username,
+				"user_id":  resp.User.ID,
+				"username": resp.User.Username,
+				"message":  resp.Message,
 			}, "注册成功")
 		})
 
@@ -130,15 +131,19 @@ func setupBusinessRoutes(r *gin.Engine, core *jobfirst.Core) {
 			}
 
 			// 使用核心包的认证管理器
-			token, expiresAt, err := core.AuthManager.Login(req.Username, req.Password)
+			clientIP := c.ClientIP()
+			userAgent := c.GetHeader("User-Agent")
+			resp, err := core.AuthManager.Login(req, clientIP, userAgent)
 			if err != nil {
 				standardErrorResponse(c, http.StatusUnauthorized, "登录失败", err.Error())
 				return
 			}
 
 			standardSuccessResponse(c, gin.H{
-				"token":      token,
-				"expires_at": expiresAt.Format(time.RFC3339),
+				"token":      resp.Token,
+				"user":       resp.User,
+				"expires_at": resp.ExpiresAt,
+				"message":    resp.Message,
 			}, "登录成功")
 		})
 	}
