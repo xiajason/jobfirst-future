@@ -402,7 +402,7 @@ jobs:
           if ./scripts/verify-database-credentials.sh; then
             echo "✅ 数据库密码适配验证成功"
             # 使用适配的配置文件
-            cp configs/.env.adapted configs/.env
+            cp configs/.env.adapted backend/.env
             cp configs/jobfirst-core-config.yaml.adapted configs/jobfirst-core-config.yaml
             echo "✅ 已使用适配的数据库配置"
           else
@@ -412,7 +412,7 @@ jobs:
           # 设置数据库
           echo "🔧 设置数据库..."
           chmod +x scripts/setup-databases.sh
-          ./scripts/setup-databases.sh configs/.env || echo "⚠️ 数据库设置失败，继续部署"
+          ./scripts/setup-databases.sh backend/.env || echo "⚠️ 数据库设置失败，继续部署"
           
           # 部署nginx配置
           echo "🌐 部署nginx配置..."
@@ -461,12 +461,15 @@ jobs:
           # ========================================
           echo "🌐 启动API Gateway (网关层)..."
           echo "职责: 量子认证 + 反向代理 + 统一入口"
-          cd backend/bin
+          
+          # 设置环境变量并从正确目录启动
+          export API_GATEWAY_PORT=8888
+          cd /opt/services
           
           # API Gateway (8888) - 量子认证 + 反向代理
           echo "启动 API Gateway (8888)..."
-          nohup ./api-gateway > ../../logs/api-gateway.log 2>&1 &
-          echo $! > ../../logs/api-gateway.pid
+          nohup ./backend/bin/api-gateway > ./logs/api-gateway.log 2>&1 &
+          echo $! > ./logs/api-gateway.pid
           wait_for_service "API Gateway" 8888
           
           # ========================================
@@ -475,58 +478,63 @@ jobs:
           echo "💼 启动微服务 (业务层)..."
           echo "职责: jobfirst-core认证 + 业务逻辑 + 信任网关Header"
           
+          # 加载环境变量
+          set -a
+          source backend/.env
+          set +a
+          
           # User Service (8081) - jobfirst-core认证
           echo "启动 User Service (8081)..."
-          nohup ./user-service > ../../logs/user-service.log 2>&1 &
-          echo $! > ../../logs/user-service.pid
+          nohup ./backend/bin/user-service > ./logs/user-service.log 2>&1 &
+          echo $! > ./logs/user-service.pid
           wait_for_service "User Service" 8081
           
           # Resume Service (8082) - jobfirst-core认证
           echo "启动 Resume Service (8082)..."
-          nohup ./resume-service > ../../logs/resume-service.log 2>&1 &
-          echo $! > ../../logs/resume-service.pid
+          nohup ./backend/bin/resume-service > ./logs/resume-service.log 2>&1 &
+          echo $! > ./logs/resume-service.pid
           wait_for_service "Resume Service" 8082
           
           # Company Service (8083) - jobfirst-core认证
           echo "启动 Company Service (8083)..."
-          nohup ./company-service > ../../logs/company-service.log 2>&1 &
-          echo $! > ../../logs/company-service.pid
+          nohup ./backend/bin/company-service > ./logs/company-service.log 2>&1 &
+          echo $! > ./logs/company-service.pid
           wait_for_service "Company Service" 8083
           
           # Notification Service (8084) - jobfirst-core认证
           echo "启动 Notification Service (8084)..."
-          nohup ./notification-service > ../../logs/notification-service.log 2>&1 &
-          echo $! > ../../logs/notification-service.pid
+          nohup ./backend/bin/notification-service > ./logs/notification-service.log 2>&1 &
+          echo $! > ./logs/notification-service.pid
           wait_for_service "Notification Service" 8084
           
           # Template Service (8085) - jobfirst-core认证
           echo "启动 Template Service (8085)..."
-          nohup ./template-service > ../../logs/template-service.log 2>&1 &
-          echo $! > ../../logs/template-service.pid
+          nohup ./backend/bin/template-service > ./logs/template-service.log 2>&1 &
+          echo $! > ./logs/template-service.pid
           wait_for_service "Template Service" 8085
           
           # Statistics Service (8086) - jobfirst-core认证
           echo "启动 Statistics Service (8086)..."
-          nohup ./statistics-service > ../../logs/statistics-service.log 2>&1 &
-          echo $! > ../../logs/statistics-service.pid
+          nohup ./backend/bin/statistics-service > ./logs/statistics-service.log 2>&1 &
+          echo $! > ./logs/statistics-service.pid
           wait_for_service "Statistics Service" 8086
           
           # Banner Service (8087) - jobfirst-core认证
           echo "启动 Banner Service (8087)..."
-          nohup ./banner-service > ../../logs/banner-service.log 2>&1 &
-          echo $! > ../../logs/banner-service.pid
+          nohup ./backend/bin/banner-service > ./logs/banner-service.log 2>&1 &
+          echo $! > ./logs/banner-service.pid
           wait_for_service "Banner Service" 8087
           
           # Dev Team Service (8088) - jobfirst-core认证
           echo "启动 Dev Team Service (8088)..."
-          nohup ./dev-team-service > ../../logs/dev-team-service.log 2>&1 &
-          echo $! > ../../logs/dev-team-service.pid
+          nohup ./backend/bin/dev-team-service > ./logs/dev-team-service.log 2>&1 &
+          echo $! > ./logs/dev-team-service.pid
           wait_for_service "Dev Team Service" 8088
           
           # Job Service (8089) - jobfirst-core认证
           echo "启动 Job Service (8089)..."
-          nohup ./job-service > ../../logs/job-service.log 2>&1 &
-          echo $! > ../../logs/job-service.pid
+          nohup ./backend/bin/job-service > ./logs/job-service.log 2>&1 &
+          echo $! > ./logs/job-service.pid
           wait_for_service "Job Service" 8089
           
           # ========================================
@@ -562,9 +570,9 @@ jobs:
             sleep 2
             
             # 加载环境变量
-            if [ -f "../configs/.env" ]; then
+            if [ -f "../backend/.env" ]; then
               set -a
-              source ../configs/.env
+              source ../backend/.env
               set +a
             fi
             
