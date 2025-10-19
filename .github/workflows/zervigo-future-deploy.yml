@@ -334,6 +334,19 @@ jobs:
             echo "⚠️ scripts目录不存在，跳过脚本文件上传"
           fi
           
+          # 上传nginx配置
+          if [ -d "nginx" ]; then
+            echo "上传nginx配置..."
+            tar -czf nginx.tar.gz -C . nginx/
+            scp -i ~/.ssh/alibaba_key nginx.tar.gz \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/
+            ssh -i ~/.ssh/alibaba_key \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
+              "cd ${{ env.ALIBABA_DEPLOY_PATH }} && tar -xzf nginx.tar.gz && rm nginx.tar.gz"
+          else
+            echo "⚠️ nginx目录不存在，跳过nginx配置上传"
+          fi
+          
           echo "✅ 文件上传完成"
       
       - name: 部署微服务 (按时序)
@@ -370,6 +383,24 @@ jobs:
           echo "🔧 设置数据库..."
           chmod +x scripts/setup-databases.sh
           ./scripts/setup-databases.sh configs/.env || echo "⚠️ 数据库设置失败，继续部署"
+          
+          # 部署nginx配置
+          echo "🌐 部署nginx配置..."
+          if [ -d "nginx" ]; then
+            echo "备份现有nginx配置..."
+            cp /etc/nginx/conf.d/looma.conf /etc/nginx/conf.d/looma.conf.backup.$(date +%Y%m%d_%H%M%S) || echo "备份失败，继续部署"
+            
+            echo "部署新的nginx配置..."
+            cp nginx/conf.d/aliyun-microservices.conf /etc/nginx/conf.d/aliyun-microservices.conf
+            
+            echo "测试nginx配置..."
+            nginx -t && echo "✅ nginx配置测试通过" || echo "❌ nginx配置测试失败"
+            
+            echo "重载nginx配置..."
+            systemctl reload nginx && echo "✅ nginx配置重载成功" || echo "❌ nginx配置重载失败"
+          else
+            echo "⚠️ nginx目录不存在，跳过nginx配置部署"
+          fi
           
           # ========================================
           # 阶段1: 启动API Gateway (网关层)
