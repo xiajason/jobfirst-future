@@ -124,100 +124,69 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: backend/go.sum
       
-      - name: 准备微服务代码和启动脚本
+      - name: 构建Go微服务二进制文件
         working-directory: backend
         run: |
-          echo "🔨 准备微服务代码和启动脚本..."
+          echo "🔨 开始构建Go微服务二进制文件..."
           go env -w GOPROXY=https://goproxy.cn,direct
           go mod download
           go mod verify
           
-          # 创建服务启动脚本目录
-          mkdir -p scripts/services
+          # 创建bin目录
+          mkdir -p bin
           
-          # 创建API Gateway启动脚本
-          cat > scripts/services/start-api-gateway.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/cmd/basic-server
-          nohup go run main.go > /opt/services/logs/api-gateway.log 2>&1 &
-          echo $! > /opt/services/logs/api-gateway.pid
-          EOF
+          # 构建API Gateway
+          echo "构建 API Gateway..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/api-gateway ./cmd/basic-server
           
-          # 创建User Service启动脚本
-          cat > scripts/services/start-user-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/user-service
-          nohup go run main.go > /opt/services/logs/user-service.log 2>&1 &
-          echo $! > /opt/services/logs/user-service.pid
-          EOF
+          # 构建User Service
+          echo "构建 User Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/user-service ./internal/user-service
           
-          # 创建Resume Service启动脚本
-          cat > scripts/services/start-resume-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/resume-service
-          nohup go run main.go > /opt/services/logs/resume-service.log 2>&1 &
-          echo $! > /opt/services/logs/resume-service.pid
-          EOF
+          # 构建Resume Service
+          echo "构建 Resume Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/resume-service ./internal/resume-service
           
-          # 创建Company Service启动脚本
-          cat > scripts/services/start-company-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/company-service
-          nohup go run main.go > /opt/services/logs/company-service.log 2>&1 &
-          echo $! > /opt/services/logs/company-service.pid
-          EOF
+          # 构建Company Service
+          echo "构建 Company Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/company-service ./internal/company-service
           
-          # 创建Notification Service启动脚本
-          cat > scripts/services/start-notification-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/notification-service
-          nohup go run main.go > /opt/services/logs/notification-service.log 2>&1 &
-          echo $! > /opt/services/logs/notification-service.pid
-          EOF
+          # 构建Notification Service
+          echo "构建 Notification Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/notification-service ./internal/notification-service
           
-          # 创建Template Service启动脚本
-          cat > scripts/services/start-template-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/template-service
-          nohup go run main.go > /opt/services/logs/template-service.log 2>&1 &
-          echo $! > /opt/services/logs/template-service.pid
-          EOF
+          # 构建Template Service
+          echo "构建 Template Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/template-service ./internal/template-service
           
-          # 创建Statistics Service启动脚本
-          cat > scripts/services/start-statistics-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/statistics-service
-          nohup go run main.go > /opt/services/logs/statistics-service.log 2>&1 &
-          echo $! > /opt/services/logs/statistics-service.pid
-          EOF
+          # 构建Statistics Service
+          echo "构建 Statistics Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/statistics-service ./internal/statistics-service
           
-          # 创建Banner Service启动脚本
-          cat > scripts/services/start-banner-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/banner-service
-          nohup go run main.go > /opt/services/logs/banner-service.log 2>&1 &
-          echo $! > /opt/services/logs/banner-service.pid
-          EOF
+          # 构建Banner Service
+          echo "构建 Banner Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/banner-service ./internal/banner-service
           
-          # 创建Dev Team Service启动脚本
-          cat > scripts/services/start-dev-team-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/dev-team-service
-          nohup go run main.go > /opt/services/logs/dev-team-service.log 2>&1 &
-          echo $! > /opt/services/logs/dev-team-service.pid
-          EOF
+          # 构建Dev Team Service
+          echo "构建 Dev Team Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/dev-team-service ./internal/dev-team-service
           
-          # 创建Job Service启动脚本
-          cat > scripts/services/start-job-service.sh << 'EOF'
-          #!/bin/bash
-          cd /opt/services/backend/internal/job-service
-          nohup go run main.go > /opt/services/logs/job-service.log 2>&1 &
-          echo $! > /opt/services/logs/job-service.pid
-          EOF
+          # 构建Job Service
+          echo "构建 Job Service..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+            -ldflags="-s -w" -o bin/job-service ./internal/job-service
           
-          chmod +x scripts/services/*.sh
-          echo "✅ 微服务启动脚本准备完成"
-          ls -la scripts/services/
+          echo "✅ 所有微服务构建完成"
+          ls -lh bin/
       
       - name: 上传微服务代码和脚本
         uses: actions/upload-artifact@v4
@@ -288,9 +257,8 @@ jobs:
           
           cd ${{ env.ALIBABA_DEPLOY_PATH }}
           
-          # 给脚本执行权限
-          chmod +x backend/scripts/services/*.sh
-          chmod +x scripts/*.sh
+          # 给二进制文件执行权限
+          chmod +x backend/bin/*
           
           # 停止现有微服务
           echo "⏸️  停止现有微服务..."
