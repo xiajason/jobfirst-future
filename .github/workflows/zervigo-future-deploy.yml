@@ -379,6 +379,19 @@ jobs:
           # 创建日志目录
           mkdir -p logs
           
+          # 验证数据库密码适配
+          echo "🔐 验证数据库密码适配..."
+          chmod +x scripts/verify-database-credentials.sh
+          if ./scripts/verify-database-credentials.sh; then
+            echo "✅ 数据库密码适配验证成功"
+            # 使用适配的配置文件
+            cp configs/.env.adapted configs/.env
+            cp configs/jobfirst-core-config.yaml.adapted configs/jobfirst-core-config.yaml
+            echo "✅ 已使用适配的数据库配置"
+          else
+            echo "⚠️ 数据库密码适配验证失败，使用默认配置"
+          fi
+          
           # 设置数据库
           echo "🔧 设置数据库..."
           chmod +x scripts/setup-databases.sh
