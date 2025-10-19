@@ -124,69 +124,119 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: backend/go.sum
       
-      - name: 构建Go微服务二进制文件
-        working-directory: backend
+      - name: 构建API Gateway和微服务
         run: |
-          echo "🔨 开始构建Go微服务二进制文件..."
+          echo "🔨 开始构建API Gateway和微服务..."
           go env -w GOPROXY=https://goproxy.cn,direct
-          go mod download
-          go mod verify
           
           # 创建bin目录
-          mkdir -p bin
+          mkdir -p backend/bin
           
-          # 构建API Gateway
-          echo "构建 API Gateway..."
+          # ========================================
+          # 阶段1: 构建API Gateway (网关层)
+          # ========================================
+          echo "🌐 构建API Gateway (网关层)..."
+          cd backend
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
             -ldflags="-s -w" -o bin/api-gateway ./cmd/basic-server
+          echo "✅ API Gateway构建完成"
           
-          # 构建User Service
+          # ========================================
+          # 阶段2: 构建微服务 (业务层)
+          # ========================================
+          echo "💼 构建微服务 (业务层)..."
+          
+          # 构建User Service (使用jobfirst-core认证)
           echo "构建 User Service..."
+          cd internal/user-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/user-service ./internal/user-service
+            -ldflags="-s -w" -o ../../bin/user-service .
+          cd ../..
           
-          # 构建Resume Service
+          # 构建Resume Service (使用jobfirst-core认证)
           echo "构建 Resume Service..."
+          cd internal/resume-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/resume-service ./internal/resume-service
+            -ldflags="-s -w" -o ../../bin/resume-service .
+          cd ../..
           
-          # 构建Company Service
+          # 构建Company Service (使用jobfirst-core认证)
           echo "构建 Company Service..."
+          cd internal/company-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/company-service ./internal/company-service
+            -ldflags="-s -w" -o ../../bin/company-service .
+          cd ../..
           
-          # 构建Notification Service
+          # 构建Notification Service (使用jobfirst-core认证)
           echo "构建 Notification Service..."
+          cd internal/notification-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/notification-service ./internal/notification-service
+            -ldflags="-s -w" -o ../../bin/notification-service .
+          cd ../..
           
-          # 构建Template Service
+          # 构建Template Service (使用jobfirst-core认证)
           echo "构建 Template Service..."
+          cd internal/template-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/template-service ./internal/template-service
+            -ldflags="-s -w" -o ../../bin/template-service .
+          cd ../..
           
-          # 构建Statistics Service
+          # 构建Statistics Service (使用jobfirst-core认证)
           echo "构建 Statistics Service..."
+          cd internal/statistics-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/statistics-service ./internal/statistics-service
+            -ldflags="-s -w" -o ../../bin/statistics-service .
+          cd ../..
           
-          # 构建Banner Service
+          # 构建Banner Service (使用jobfirst-core认证)
           echo "构建 Banner Service..."
+          cd internal/banner-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/banner-service ./internal/banner-service
+            -ldflags="-s -w" -o ../../bin/banner-service .
+          cd ../..
           
-          # 构建Dev Team Service
+          # 构建Dev Team Service (使用jobfirst-core认证)
           echo "构建 Dev Team Service..."
+          cd internal/dev-team-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/dev-team-service ./internal/dev-team-service
+            -ldflags="-s -w" -o ../../bin/dev-team-service .
+          cd ../..
           
-          # 构建Job Service
+          # 构建Job Service (使用jobfirst-core认证)
           echo "构建 Job Service..."
+          cd internal/job-service
+          go mod download
+          go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/job-service ./internal/job-service
+            -ldflags="-s -w" -o ../../bin/job-service .
+          cd ../..
           
-          echo "✅ 所有微服务构建完成"
+          echo "✅ 所有服务构建完成"
+          echo ""
+          echo "📊 构建结果:"
           ls -lh bin/
+          echo ""
+          echo "🏗️ 架构说明:"
+          echo "  🌐 API Gateway (8080) - 量子认证 + 反向代理"
+          echo "  💼 微服务 (8081-8089) - jobfirst-core认证 + 业务逻辑"
       
       - name: 上传微服务代码和脚本
         uses: actions/upload-artifact@v4
@@ -279,12 +329,13 @@ jobs:
           mkdir -p logs
           
           # ========================================
-          # 阶段1: 网关层 (8080)
+          # 阶段1: 启动API Gateway (网关层)
           # ========================================
-          echo "🌐 启动网关层..."
+          echo "🌐 启动API Gateway (网关层)..."
+          echo "职责: 量子认证 + 反向代理 + 统一入口"
           cd backend/bin
           
-          # API Gateway (8080)
+          # API Gateway (8080) - 量子认证 + 反向代理
           echo "启动 API Gateway (8080)..."
           nohup ./api-gateway > ../../logs/api-gateway.log 2>&1 &
           echo $! > ../../logs/api-gateway.pid
@@ -292,82 +343,68 @@ jobs:
           curl -f http://localhost:8080/health && echo "✅ API Gateway OK" || echo "❌ API Gateway Failed"
           
           # ========================================
-          # 阶段2: 认证授权层 (8081)
+          # 阶段2: 启动微服务 (业务层)
           # ========================================
-          echo "🔐 启动认证授权层..."
+          echo "💼 启动微服务 (业务层)..."
+          echo "职责: jobfirst-core认证 + 业务逻辑 + 信任网关Header"
           
-          # User Service (8081)
+          # User Service (8081) - jobfirst-core认证
           echo "启动 User Service (8081)..."
           nohup ./user-service > ../../logs/user-service.log 2>&1 &
           echo $! > ../../logs/user-service.pid
           sleep 10
           curl -f http://localhost:8081/health && echo "✅ User Service OK" || echo "❌ User Service Failed"
           
-          # ========================================
-          # 阶段3: 核心业务层 (8082-8083)
-          # ========================================
-          echo "💼 启动核心业务层..."
-          
-          # Resume Service (8082)
+          # Resume Service (8082) - jobfirst-core认证
           echo "启动 Resume Service (8082)..."
           nohup ./resume-service > ../../logs/resume-service.log 2>&1 &
           echo $! > ../../logs/resume-service.pid
           sleep 5
           curl -f http://localhost:8082/health && echo "✅ Resume Service OK" || echo "❌ Resume Service Failed"
           
-          # Company Service (8083)
+          # Company Service (8083) - jobfirst-core认证
           echo "启动 Company Service (8083)..."
           nohup ./company-service > ../../logs/company-service.log 2>&1 &
           echo $! > ../../logs/company-service.pid
           sleep 5
           curl -f http://localhost:8083/health && echo "✅ Company Service OK" || echo "❌ Company Service Failed"
           
-          # ========================================
-          # 阶段4: 支撑服务层 (8084-8087)
-          # ========================================
-          echo "🔧 启动支撑服务层..."
-          
-          # Notification Service (8084)
+          # Notification Service (8084) - jobfirst-core认证
           echo "启动 Notification Service (8084)..."
           nohup ./notification-service > ../../logs/notification-service.log 2>&1 &
           echo $! > ../../logs/notification-service.pid
           sleep 3
           curl -f http://localhost:8084/health && echo "✅ Notification Service OK" || echo "❌ Notification Service Failed"
           
-          # Template Service (8085)
+          # Template Service (8085) - jobfirst-core认证
           echo "启动 Template Service (8085)..."
           nohup ./template-service > ../../logs/template-service.log 2>&1 &
           echo $! > ../../logs/template-service.pid
           sleep 3
           curl -f http://localhost:8085/health && echo "✅ Template Service OK" || echo "❌ Template Service Failed"
           
-          # Statistics Service (8086)
+          # Statistics Service (8086) - jobfirst-core认证
           echo "启动 Statistics Service (8086)..."
           nohup ./statistics-service > ../../logs/statistics-service.log 2>&1 &
           echo $! > ../../logs/statistics-service.pid
           sleep 3
           curl -f http://localhost:8086/health && echo "✅ Statistics Service OK" || echo "❌ Statistics Service Failed"
           
-          # Banner Service (8087)
+          # Banner Service (8087) - jobfirst-core认证
           echo "启动 Banner Service (8087)..."
           nohup ./banner-service > ../../logs/banner-service.log 2>&1 &
           echo $! > ../../logs/banner-service.pid
           sleep 3
           curl -f http://localhost:8087/health && echo "✅ Banner Service OK" || echo "❌ Banner Service Failed"
           
-          # ========================================
-          # 阶段5: 管理服务层 (8088-8089)
-          # ========================================
-          echo "⚙️ 启动管理服务层..."
-          
-          # Dev Team Service (8088)
+          # Dev Team Service (8088) - jobfirst-core认证
           echo "启动 Dev Team Service (8088)..."
           nohup ./dev-team-service > ../../logs/dev-team-service.log 2>&1 &
           echo $! > ../../logs/dev-team-service.pid
           sleep 3
           curl -f http://localhost:8088/health && echo "✅ Dev Team Service OK" || echo "❌ Dev Team Service Failed"
           
-          # Job Service (8089)
+          # Job Service (8089) - jobfirst-core认证
           echo "启动 Job Service (8089)..."
           nohup ./job-service > ../../logs/job-service.log 2>&1 &
           echo $! > ../../logs/job-service.pid
@@ -376,8 +413,21 @@ jobs:
           
           echo ""
           echo "=========================================="
-          echo "✅ 所有微服务部署完成！"
+          echo "✅ 所有服务部署完成！"
           echo "=========================================="
+          echo ""
+          echo "🏗️ 架构说明:"
+          echo "  🌐 API Gateway (8080) - 量子认证 + 反向代理 + 统一入口"
+          echo "  💼 微服务 (8081-8089) - jobfirst-core认证 + 业务逻辑"
+          echo ""
+          echo "🔐 认证流程:"
+          echo "  1. 外部请求 → API Gateway (量子认证)"
+          echo "  2. API Gateway → 微服务 (添加X-User-* Headers)"
+          echo "  3. 微服务 → 信任网关Header或使用jobfirst-core认证"
+          echo ""
+          echo "📡 访问方式:"
+          echo "  - 通过网关: http://47.115.168.107:8080/api/v1/*"
+          echo "  - 直接访问: http://47.115.168.107:8081-8089/api/v1/*"
           
           ENDSSH
       
