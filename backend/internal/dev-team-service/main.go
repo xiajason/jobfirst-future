@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,13 @@ import (
 )
 
 func main() {
+	// 从环境变量获取端口，默认为8088
+	port := os.Getenv("DEV_TEAM_SERVICE_PORT")
+	if port == "" {
+		port = "8088"
+	}
+	portInt, _ := strconv.Atoi(port)
+
 	// 设置进程名称
 	if len(os.Args) > 0 {
 		os.Args[0] = "dev-team-service"
@@ -36,11 +44,11 @@ func main() {
 	r.GET("/info", serviceInfo)
 
 	// 注册到Consul
-	registerToConsul("dev-team-service", "127.0.0.1", 7538)
+	registerToConsul("dev-team-service", "127.0.0.1", portInt)
 
 	// 启动服务
-	log.Println("Starting Dev Team Service with jobfirst-core on 0.0.0.0:7538")
-	if err := r.Run(":7538"); err != nil {
+	log.Printf("Starting Dev Team Service with jobfirst-core on 0.0.0.0:%s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Dev Team Service启动失败: %v", err)
 	}
 }

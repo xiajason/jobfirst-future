@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +14,13 @@ import (
 )
 
 func main() {
+	// 从环境变量获取端口，默认为8085
+	port := os.Getenv("TEMPLATE_SERVICE_PORT")
+	if port == "" {
+		port = "8085"
+	}
+	portInt, _ := strconv.Atoi(port)
+
 	// 初始化JobFirst核心包
 	core, err := jobfirst.NewCore("../../configs/jobfirst-core-config.yaml")
 	if err != nil {
@@ -51,14 +59,14 @@ func main() {
 	}
 
 	// 注册到Consul
-	registerToConsul("template-service", "127.0.0.1", 7532)
+	registerToConsul("template-service", "127.0.0.1", portInt)
 
 	// 启动服务器
-	log.Println("Starting Template Service with jobfirst-core on 0.0.0.0:7532")
+	log.Printf("Starting Template Service with jobfirst-core on 0.0.0.0:%s", port)
 	if enhancedService != nil {
 		log.Println("多数据库架构已启用")
 	}
-	if err := r.Run(":7532"); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }

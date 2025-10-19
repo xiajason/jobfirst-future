@@ -427,7 +427,7 @@ jobs:
           nohup ./api-gateway > ../../logs/api-gateway.log 2>&1 &
           echo $! > ../../logs/api-gateway.pid
           sleep 10
-          curl -f http://localhost:8080/health && echo "✅ API Gateway OK" || echo "❌ API Gateway Failed"
+          curl -f http://localhost:8888/health && echo "✅ API Gateway OK" || echo "❌ API Gateway Failed"
           
           # ========================================
           # 阶段2: 启动微服务 (业务层)
@@ -552,7 +552,7 @@ jobs:
           # 网关层
           echo ""
           echo "=== 网关层 ==="
-          curl -f http://localhost:8080/health && echo "✅ API Gateway (8080)" || echo "❌ API Gateway (8080)"
+          curl -f http://localhost:8888/health && echo "✅ API Gateway (8888)" || echo "❌ API Gateway (8888)"
           
           # 认证授权层
           echo ""

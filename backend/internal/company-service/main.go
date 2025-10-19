@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -14,6 +15,13 @@ import (
 )
 
 func main() {
+	// 从环境变量获取端口，默认为8083
+	port := os.Getenv("COMPANY_SERVICE_PORT")
+	if port == "" {
+		port = "8083"
+	}
+	portInt, _ := strconv.Atoi(port)
+
 	// 初始化JobFirst核心包
 	core, err := jobfirst.NewCore("../../configs/jobfirst-core-config.yaml")
 	if err != nil {
@@ -77,11 +85,11 @@ func main() {
 	creditInfoAPI.SetupCreditInfoRoutes(r)
 
 	// 注册到Consul
-	registerToConsul("company-service", "127.0.0.1", 7534)
+	registerToConsul("company-service", "127.0.0.1", portInt)
 
 	// 启动服务器
-	log.Println("Starting Company Service with jobfirst-core on 0.0.0.0:7534")
-	if err := r.Run(":7534"); err != nil {
+	log.Printf("Starting Company Service with jobfirst-core on 0.0.0.0:%s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }

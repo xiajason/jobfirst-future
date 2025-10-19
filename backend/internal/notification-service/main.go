@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +14,13 @@ import (
 )
 
 func main() {
+	// 从环境变量获取端口，默认为8084
+	port := os.Getenv("NOTIFICATION_SERVICE_PORT")
+	if port == "" {
+		port = "8084"
+	}
+	portInt, _ := strconv.Atoi(port)
+
 	// 初始化JobFirst核心包
 	core, err := jobfirst.NewCore("../../configs/jobfirst-core-config.yaml")
 	if err != nil {
@@ -56,11 +64,11 @@ func main() {
 	setupCostControlNotificationRoutes(r, core)
 
 	// 注册到Consul
-	registerToConsul("notification-service", "127.0.0.1", 7534)
+	registerToConsul("notification-service", "127.0.0.1", portInt)
 
 	// 启动服务器
-	log.Println("Starting Notification Service with jobfirst-core on 0.0.0.0:7534")
-	if err := r.Run(":7534"); err != nil {
+	log.Printf("Starting Notification Service with jobfirst-core on 0.0.0.0:%s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }
