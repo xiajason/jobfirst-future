@@ -276,7 +276,7 @@ jobs:
           # 创建远程目录结构（包括所有需要的子目录）
           ssh -i ~/.ssh/alibaba_key \
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
-            "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/{cmd/basic-server,internal/{user-service,resume-service,company-service,notification-service,template-service,statistics-service,banner-service,dev-team-service,job-service},pkg,scripts/services,bin},configs,logs,scripts}"
+            "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/{cmd/api-gateway,internal/{user-service,resume-service,company-service,notification-service,template-service,statistics-service,banner-service,dev-team-service,job-service},pkg,scripts/services,bin},configs,logs,scripts}"
           
           # 上传微服务源代码（保持目录结构）
           echo "上传后端代码..."
