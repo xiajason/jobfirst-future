@@ -433,18 +433,41 @@ jobs:
           fi
           
           # ========================================
+          # 健康检查函数（带重试机制）
+          # ========================================
+          wait_for_service() {
+            local service_name=$1
+            local port=$2
+            local max_attempts=30
+            local attempt=1
+            
+            echo "等待 $service_name 启动..."
+            while [ $attempt -le $max_attempts ]; do
+              if curl -f -s http://localhost:$port/health > /dev/null 2>&1; then
+                echo "✅ $service_name OK (尝试 $attempt/$max_attempts)"
+                return 0
+              fi
+              echo "  尝试 $attempt/$max_attempts..."
+              sleep 1
+              attempt=$((attempt + 1))
+            done
+            
+            echo "❌ $service_name Failed (超时30秒)"
+            return 1
+          }
+          
+          # ========================================
           # 阶段1: 启动API Gateway (网关层)
           # ========================================
           echo "🌐 启动API Gateway (网关层)..."
           echo "职责: 量子认证 + 反向代理 + 统一入口"
           cd backend/bin
           
-          # API Gateway (8080) - 量子认证 + 反向代理
-          echo "启动 API Gateway (8080)..."
+          # API Gateway (8888) - 量子认证 + 反向代理
+          echo "启动 API Gateway (8888)..."
           nohup ./api-gateway > ../../logs/api-gateway.log 2>&1 &
           echo $! > ../../logs/api-gateway.pid
-          sleep 10
-          curl -f http://localhost:8888/health && echo "✅ API Gateway OK" || echo "❌ API Gateway Failed"
+          wait_for_service "API Gateway" 8888
           
           # ========================================
           # 阶段2: 启动微服务 (业务层)
@@ -456,64 +479,55 @@ jobs:
           echo "启动 User Service (8081)..."
           nohup ./user-service > ../../logs/user-service.log 2>&1 &
           echo $! > ../../logs/user-service.pid
-          sleep 10
-          curl -f http://localhost:8081/health && echo "✅ User Service OK" || echo "❌ User Service Failed"
+          wait_for_service "User Service" 8081
           
           # Resume Service (8082) - jobfirst-core认证
           echo "启动 Resume Service (8082)..."
           nohup ./resume-service > ../../logs/resume-service.log 2>&1 &
           echo $! > ../../logs/resume-service.pid
-          sleep 5
-          curl -f http://localhost:8082/health && echo "✅ Resume Service OK" || echo "❌ Resume Service Failed"
+          wait_for_service "Resume Service" 8082
           
           # Company Service (8083) - jobfirst-core认证
           echo "启动 Company Service (8083)..."
           nohup ./company-service > ../../logs/company-service.log 2>&1 &
           echo $! > ../../logs/company-service.pid
-          sleep 5
-          curl -f http://localhost:8083/health && echo "✅ Company Service OK" || echo "❌ Company Service Failed"
+          wait_for_service "Company Service" 8083
           
           # Notification Service (8084) - jobfirst-core认证
           echo "启动 Notification Service (8084)..."
           nohup ./notification-service > ../../logs/notification-service.log 2>&1 &
           echo $! > ../../logs/notification-service.pid
-          sleep 3
-          curl -f http://localhost:8084/health && echo "✅ Notification Service OK" || echo "❌ Notification Service Failed"
+          wait_for_service "Notification Service" 8084
           
           # Template Service (8085) - jobfirst-core认证
           echo "启动 Template Service (8085)..."
           nohup ./template-service > ../../logs/template-service.log 2>&1 &
           echo $! > ../../logs/template-service.pid
-          sleep 3
-          curl -f http://localhost:8085/health && echo "✅ Template Service OK" || echo "❌ Template Service Failed"
+          wait_for_service "Template Service" 8085
           
           # Statistics Service (8086) - jobfirst-core认证
           echo "启动 Statistics Service (8086)..."
           nohup ./statistics-service > ../../logs/statistics-service.log 2>&1 &
           echo $! > ../../logs/statistics-service.pid
-          sleep 3
-          curl -f http://localhost:8086/health && echo "✅ Statistics Service OK" || echo "❌ Statistics Service Failed"
+          wait_for_service "Statistics Service" 8086
           
           # Banner Service (8087) - jobfirst-core认证
           echo "启动 Banner Service (8087)..."
           nohup ./banner-service > ../../logs/banner-service.log 2>&1 &
           echo $! > ../../logs/banner-service.pid
-          sleep 3
-          curl -f http://localhost:8087/health && echo "✅ Banner Service OK" || echo "❌ Banner Service Failed"
+          wait_for_service "Banner Service" 8087
           
           # Dev Team Service (8088) - jobfirst-core认证
           echo "启动 Dev Team Service (8088)..."
           nohup ./dev-team-service > ../../logs/dev-team-service.log 2>&1 &
           echo $! > ../../logs/dev-team-service.pid
-          sleep 3
-          curl -f http://localhost:8088/health && echo "✅ Dev Team Service OK" || echo "❌ Dev Team Service Failed"
+          wait_for_service "Dev Team Service" 8088
           
           # Job Service (8089) - jobfirst-core认证
           echo "启动 Job Service (8089)..."
           nohup ./job-service > ../../logs/job-service.log 2>&1 &
           echo $! > ../../logs/job-service.pid
-          sleep 3
-          curl -f http://localhost:8089/health && echo "✅ Job Service OK" || echo "❌ Job Service Failed"
+          wait_for_service "Job Service" 8089
           
           # ========================================
           # 阶段4: 部署AI服务 (Python服务)
@@ -560,10 +574,10 @@ jobs:
             nohup python ai_service_with_zervigo.py > ../logs/ai-service.log 2>&1 &
             AI_PID=$!
             echo $AI_PID > ../logs/ai-service.pid
-            sleep 5
             
-            # 健康检查
-            curl -f http://localhost:$AI_PORT/health && echo "✅ AI Service OK" || echo "⚠️ AI Service 启动中或需要配置数据库"
+            # 健康检查（带重试）
+            cd ..
+            wait_for_service "AI Service" $AI_PORT
             
             cd ..
           else
