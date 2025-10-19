@@ -301,18 +301,30 @@ jobs:
               ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/ || echo "⚠️ 配置文件上传失败或不存在"
           fi
           
-          # 上传数据库脚本
+          # 上传数据库脚本（使用tar方式避免SCP目录权限问题）
           if [ -d "database" ]; then
             echo "上传数据库脚本..."
-            scp -i ~/.ssh/alibaba_key -r database/ \
-              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/database/
+            tar -czf database.tar.gz -C . database/
+            scp -i ~/.ssh/alibaba_key database.tar.gz \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/
+            ssh -i ~/.ssh/alibaba_key \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
+              "cd ${{ env.ALIBABA_DEPLOY_PATH }} && tar -xzf database.tar.gz && rm database.tar.gz"
+          else
+            echo "⚠️ database目录不存在，跳过数据库脚本上传"
           fi
           
-          # 上传脚本文件
+          # 上传脚本文件（使用tar方式避免SCP目录权限问题）
           if [ -d "scripts" ]; then
             echo "上传脚本文件..."
-            scp -i ~/.ssh/alibaba_key -r scripts/ \
-              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/scripts/
+            tar -czf scripts.tar.gz -C . scripts/
+            scp -i ~/.ssh/alibaba_key scripts.tar.gz \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/
+            ssh -i ~/.ssh/alibaba_key \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
+              "cd ${{ env.ALIBABA_DEPLOY_PATH }} && tar -xzf scripts.tar.gz && rm scripts.tar.gz"
+          else
+            echo "⚠️ scripts目录不存在，跳过脚本文件上传"
           fi
           
           echo "✅ 文件上传完成"
