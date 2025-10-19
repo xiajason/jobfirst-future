@@ -22,7 +22,7 @@ func main() {
 	portInt, _ := strconv.Atoi(port)
 
 	// 初始化JobFirst核心包
-	core, err := jobfirst.NewCore("../../configs/jobfirst-core-config.yaml")
+	core, err := jobfirst.NewCore("configs/jobfirst-core-config.yaml")
 	if err != nil {
 		log.Fatalf("初始化JobFirst核心包失败: %v", err)
 	}

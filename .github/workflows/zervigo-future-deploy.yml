@@ -548,9 +548,9 @@ jobs:
           cd ../..
           
           # 检查并解压AI服务
-          if [ -f "ai-service.tar.gz" ]; then
+          if [ -f "backend/ai-service.tar.gz" ]; then
             echo "解压AI服务代码..."
-            tar -xzf ai-service.tar.gz -C .
+            tar -xzf backend/ai-service.tar.gz -C .
             cd ai-service
             
             # 创建或激活虚拟环境
