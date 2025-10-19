@@ -549,18 +549,21 @@ jobs:
             
             # 加载环境变量
             if [ -f "../configs/.env" ]; then
-              export \$(cat ../configs/.env | grep -v '^#' | xargs)
+              set -a
+              source ../configs/.env
+              set +a
             fi
             
             # 启动AI服务
-            echo "启动AI服务 (端口: \${AI_SERVICE_PORT:-8100})..."
+            AI_PORT=${AI_SERVICE_PORT:-8100}
+            echo "启动AI服务 (端口: $AI_PORT)..."
             nohup python ai_service_with_zervigo.py > ../logs/ai-service.log 2>&1 &
-            echo \$! > ../logs/ai-service.pid
+            AI_PID=$!
+            echo $AI_PID > ../logs/ai-service.pid
             sleep 5
             
             # 健康检查
-            AI_PORT=\${AI_SERVICE_PORT:-8100}
-            curl -f http://localhost:\$AI_PORT/health && echo "✅ AI Service OK" || echo "⚠️ AI Service 启动中或需要配置数据库"
+            curl -f http://localhost:$AI_PORT/health && echo "✅ AI Service OK" || echo "⚠️ AI Service 启动中或需要配置数据库"
             
             cd ..
           else
