@@ -7,9 +7,12 @@ on:
       - develop   # 开发/测试环境
     paths:
       - 'backend/**'
+      - 'ai-service/**'
       - 'scripts/**'
       - 'docs/**'
       - 'nginx/**'
+      - 'configs/**'
+      - 'database/**'
       - 'docker-compose*.yml'
       - '.github/workflows/zervigo-future-deploy.yml'
   
