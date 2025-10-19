@@ -26,3 +26,7 @@ test_*.sh
 local_config.yml
 .env.local
 
+backend/cmd/*/unified-auth
+backend/cmd/*/api-gateway
+backend/internal/*/service-binary
+**/bin/
