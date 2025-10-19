@@ -68,13 +68,16 @@ type DevOperationLog struct {
 	User User `json:"user" gorm:"foreignKey:UserID"`
 }
 
-// JWT Claims
+// JWT Claims - 支持跨云量子认证
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	Exp      int64  `json:"exp"`
-	Iat      int64  `json:"iat"`
+	UserID      uint                   `json:"user_id"`
+	Username    string                 `json:"username"`
+	Role        string                 `json:"role"`
+	Permissions map[string]interface{} `json:"permissions,omitempty"` // 天翼云量子Token的权限字段
+	Quantum     bool                   `json:"quantum,omitempty"`     // 是否为量子Token
+	QSeed       string                 `json:"qseed,omitempty"`       // 量子种子（用于密钥增强）
+	// 移除硬编码的 Exp 和 Iat，使用 jwt.RegisteredClaims 自动处理
+	// jwt.RegisteredClaims 可以正确解析 Python 的浮点数时间戳
 	jwt.RegisteredClaims
 }
 

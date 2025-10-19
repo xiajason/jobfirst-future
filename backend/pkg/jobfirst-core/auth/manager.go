@@ -158,30 +158,57 @@ func (am *AuthManager) SuperAdminLogin(req LoginRequest, clientIP, userAgent str
 	}, nil
 }
 
-// ValidateToken 验证JWT token
+// ValidateToken 验证JWT token（支持跨云量子认证）
 func (am *AuthManager) ValidateToken(tokenString string) (*Claims, error) {
 	if len(tokenString) > 50 {
 		log.Printf("DEBUG: 开始验证JWT token: %s...", tokenString[:50])
 	} else {
 		log.Printf("DEBUG: 开始验证JWT token: %s", tokenString)
 	}
-	log.Printf("DEBUG: 使用JWT secret: %s", am.config.JWTSecret)
-	
-	claims := &Claims{}
+	log.Printf("DEBUG: 基础JWT secret: %s", am.config.JWTSecret)
 
+	// 第一步：预解析Token（不验证签名）判断是否为量子Token
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	unverifiedToken, _, err := parser.ParseUnverified(tokenString, &Claims{})
+	if err != nil {
+		log.Printf("DEBUG: Token预解析失败: %v", err)
+		return nil, fmt.Errorf("token格式错误: %w", err)
+	}
+
+	unverifiedClaims := unverifiedToken.Claims.(*Claims)
+
+	// 第二步：根据Token类型选择密钥
+	var signingKey string
+	if unverifiedClaims.Quantum && unverifiedClaims.QSeed != "" {
+		// 量子Token - 使用密钥增强
+		enhancedKey := am.config.JWTSecret + unverifiedClaims.QSeed
+		if len(enhancedKey) > 64 {
+			signingKey = enhancedKey[:64]
+		} else {
+			signingKey = enhancedKey
+		}
+		log.Printf("✅ [Quantum Auth] 检测到量子Token, qseed=%s...", unverifiedClaims.QSeed[:8])
+		log.Printf("🔑 [Quantum Auth] 使用增强密钥（长度: %d）", len(signingKey))
+	} else {
+		// 传统Token - 标准密钥（向后兼容）
+		signingKey = am.config.JWTSecret
+		log.Printf("🔑 [Standard Auth] 使用标准密钥")
+	}
+
+	// 第三步：使用正确的密钥验证Token
+	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		log.Printf("DEBUG: JWT解析 - 算法: %v", token.Header["alg"])
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			log.Printf("DEBUG: JWT解析失败 - 不支持的签名方法: %v", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		log.Printf("DEBUG: JWT解析 - 使用secret进行验证")
-		return []byte(am.config.JWTSecret), nil
+		return []byte(signingKey), nil
 	})
 
 	if err != nil {
-		log.Printf("DEBUG: JWT解析失败: %v", err)
-		return nil, fmt.Errorf("token解析失败: %w", err)
+		log.Printf("DEBUG: JWT验证失败: %v", err)
+		return nil, fmt.Errorf("token验证失败: %w", err)
 	}
 
 	if !token.Valid {
@@ -189,12 +216,21 @@ func (am *AuthManager) ValidateToken(tokenString string) (*Claims, error) {
 		return nil, errors.New("无效的token")
 	}
 
-	// 检查token是否过期
-	currentTime := time.Now().Unix()
-	log.Printf("DEBUG: 当前时间: %d, Token过期时间: %d", currentTime, claims.Exp)
-	if currentTime > claims.Exp {
-		log.Printf("DEBUG: Token已过期")
-		return nil, errors.New("token已过期")
+	// 检查token是否过期（使用jwt.RegisteredClaims的ExpiresAt）
+	if claims.ExpiresAt != nil {
+		currentTime := time.Now()
+		expiryTime := claims.ExpiresAt.Time
+		log.Printf("DEBUG: 当前时间: %v, Token过期时间: %v", currentTime, expiryTime)
+		if currentTime.After(expiryTime) {
+			log.Printf("DEBUG: Token已过期")
+			return nil, errors.New("token已过期")
+		}
+	}
+
+	if claims.Quantum {
+		log.Printf("✅ [Quantum Auth] 量子Token验证成功: %s (role: %s)", claims.Username, claims.Role)
+	} else {
+		log.Printf("✅ [Standard Auth] 标准Token验证成功: %s (role: %s)", claims.Username, claims.Role)
 	}
 
 	return claims, nil
@@ -251,16 +287,21 @@ func (am *AuthManager) validatePassword(password, hash string) bool {
 	return err == nil
 }
 
-// generateToken 生成JWT token
+// generateToken 生成JWT token（支持量子认证格式）
 func (am *AuthManager) generateToken(userID uint, username, role string) (string, time.Time, error) {
-	expiresAt := time.Now().Add(am.config.TokenExpiry)
+	now := time.Now()
+	expiresAt := now.Add(am.config.TokenExpiry)
 
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		Role:     role,
-		Exp:      expiresAt.Unix(),
-		Iat:      time.Now().Unix(),
+		Quantum:  false, // 本地生成的是标准Token
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

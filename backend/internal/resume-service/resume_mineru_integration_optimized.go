@@ -36,8 +36,14 @@ type ResumeMinerUIntegrationOptimized struct {
 
 // NewResumeMinerUIntegrationOptimized 创建优化版集成服务
 func NewResumeMinerUIntegrationOptimized() *ResumeMinerUIntegrationOptimized {
+	// 从环境变量获取MinerU服务地址（云无关设计）
+	mineruURL := os.Getenv("MINERU_SERVICE_URL")
+	if mineruURL == "" {
+		mineruURL = "http://localhost:8621" // 默认本地地址
+	}
+
 	return &ResumeMinerUIntegrationOptimized{
-		mineruURL: "http://47.115.168.107:8621", // ← MinerU服务地址（阿里云）
+		mineruURL: mineruURL,
 		client: &http.Client{
 			Timeout: 60 * time.Second,
 		},
