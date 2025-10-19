@@ -254,22 +254,28 @@ jobs:
         run: |
           echo "📤 上传微服务文件到阿里云..."
           
-          # 创建远程目录
+          # 创建远程目录结构（包括所有需要的子目录）
           ssh -i ~/.ssh/alibaba_key \
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
-            "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/bin,configs,logs,scripts}"
+            "mkdir -p ${{ env.ALIBABA_DEPLOY_PATH }}/{backend/{cmd/basic-server,internal/{user-service,resume-service,company-service,notification-service,template-service,statistics-service,banner-service,dev-team-service,job-service},pkg,scripts/services,bin},configs,logs,scripts}"
           
-          # 上传微服务代码和启动脚本
-          scp -i ~/.ssh/alibaba_key -r backend-services/* \
+          # 上传微服务源代码（保持目录结构）
+          echo "上传后端代码..."
+          tar -czf backend-code.tar.gz -C backend-services .
+          scp -i ~/.ssh/alibaba_key backend-code.tar.gz \
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/backend/
           
-          # 上传配置文件
-          scp -i ~/.ssh/alibaba_key -r backend-services/configs/* \
-            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/
+          # 在远程服务器上解压
+          ssh -i ~/.ssh/alibaba_key \
+            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
+            "cd ${{ env.ALIBABA_DEPLOY_PATH }}/backend && tar -xzf backend-code.tar.gz && rm backend-code.tar.gz"
           
-          # 上传部署脚本
-          scp -i ~/.ssh/alibaba_key scripts/*.sh \
-            ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/scripts/
+          # 上传配置文件
+          if [ -d "backend-services/configs" ]; then
+            echo "上传配置文件..."
+            scp -i ~/.ssh/alibaba_key -r backend-services/configs/* \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/ || echo "⚠️ 配置文件上传失败或不存在"
+          fi
           
           echo "✅ 文件上传完成"
       
