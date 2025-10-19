@@ -78,6 +78,10 @@ services=(
     "job-service"
 )
 
+# Generate jobfirst-core-config.yaml first (this is the core config that all services depend on)
+print_status "Processing core configuration: configs/templates/jobfirst-core-config.yaml.template -> configs/generated/jobfirst-core-config.yaml"
+process_template "configs/templates/jobfirst-core-config.yaml.template" "configs/generated/jobfirst-core-config.yaml"
+
 # Process each service template
 for service in "${services[@]}"; do
     template_file="configs/templates/${service}-config.yaml.template"

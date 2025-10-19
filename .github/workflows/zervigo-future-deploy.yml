@@ -299,6 +299,13 @@ jobs:
             echo "上传生成的配置文件..."
             scp -i ~/.ssh/alibaba_key -r configs/generated/* \
               ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/ || echo "⚠️ 配置文件上传失败或不存在"
+            
+            # 特别上传jobfirst-core-config.yaml到backend/configs目录
+            if [ -f "configs/generated/jobfirst-core-config.yaml" ]; then
+              echo "上传核心配置文件jobfirst-core-config.yaml..."
+              scp -i ~/.ssh/alibaba_key configs/generated/jobfirst-core-config.yaml \
+                ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/backend/configs/jobfirst-core-config.yaml
+            fi
           fi
           
           # 上传数据库脚本（使用tar方式避免SCP目录权限问题）
