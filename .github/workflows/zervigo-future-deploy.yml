@@ -140,7 +140,7 @@ jobs:
           go mod download
           go mod verify
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o bin/api-gateway ./cmd/basic-server
+            -ldflags="-s -w" -o bin/api-gateway ./cmd/api-gateway
           echo "✅ API Gateway构建完成"
           
           # ========================================
