@@ -289,11 +289,30 @@ jobs:
             ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }} \
             "cd ${{ env.ALIBABA_DEPLOY_PATH }}/backend && tar -xzf backend-code.tar.gz && rm backend-code.tar.gz"
           
-          # 上传配置文件
-          if [ -d "backend-services/configs" ]; then
-            echo "上传配置文件..."
-            scp -i ~/.ssh/alibaba_key -r backend-services/configs/* \
+          # 生成环境特定的配置文件
+          echo "生成环境特定的配置文件..."
+          chmod +x scripts/generate-configs.sh
+          ./scripts/generate-configs.sh configs/templates/aliyun.env.template
+          
+          # 上传生成的配置文件
+          if [ -d "configs/generated" ]; then
+            echo "上传生成的配置文件..."
+            scp -i ~/.ssh/alibaba_key -r configs/generated/* \
               ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/configs/ || echo "⚠️ 配置文件上传失败或不存在"
+          fi
+          
+          # 上传数据库脚本
+          if [ -d "database" ]; then
+            echo "上传数据库脚本..."
+            scp -i ~/.ssh/alibaba_key -r database/ \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/database/
+          fi
+          
+          # 上传脚本文件
+          if [ -d "scripts" ]; then
+            echo "上传脚本文件..."
+            scp -i ~/.ssh/alibaba_key -r scripts/ \
+              ${{ env.ALIBABA_SERVER_USER }}@${{ env.ALIBABA_SERVER_IP }}:${{ env.ALIBABA_DEPLOY_PATH }}/scripts/
           fi
           
           echo "✅ 文件上传完成"
@@ -327,6 +346,11 @@ jobs:
           
           # 创建日志目录
           mkdir -p logs
+          
+          # 设置数据库
+          echo "🔧 设置数据库..."
+          chmod +x scripts/setup-databases.sh
+          ./scripts/setup-databases.sh configs/.env || echo "⚠️ 数据库设置失败，继续部署"
           
           # ========================================
           # 阶段1: 启动API Gateway (网关层)

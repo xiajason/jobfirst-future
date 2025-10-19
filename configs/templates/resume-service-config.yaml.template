@@ -1,0 +1,38 @@
+# Resume Service Configuration Template
+database:
+  host: "${DB_HOST}"
+  port: ${DB_PORT}
+  username: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  database: "${DB_NAME}"
+  charset: "utf8mb4"
+  max_idle: 10
+  max_open: 100
+  max_lifetime: "1h"
+  log_level: "warn"
+
+redis:
+  host: "${REDIS_HOST}"
+  port: ${REDIS_PORT}
+  password: "${REDIS_PASSWORD}"
+  database: 0
+  pool_size: 10
+
+server:
+  host: "0.0.0.0"
+  port: ${RESUME_SERVICE_PORT}
+  mode: "release"
+
+auth:
+  jwt_secret: "${JWT_SECRET}"
+  token_expiry: "168h"
+  refresh_expiry: "720h"
+  password_min_length: 6
+  max_login_attempts: 5
+  lockout_duration: "30m"
+
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  file: "./logs/resume-service.log"
