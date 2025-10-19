@@ -30,3 +30,7 @@ backend/cmd/*/unified-auth
 backend/cmd/*/api-gateway
 backend/internal/*/service-binary
 **/bin/
+# Python虚拟环境
+ai-service/venv/
+**/__pycache__/
+**/*.pyc
