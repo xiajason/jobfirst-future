@@ -124,110 +124,105 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: backend/go.sum
       
-      - name: 构建API Gateway和微服务
+      - name: 缓存Go依赖（优化构建速度）
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: 构建API Gateway和微服务（使用共享go.mod）
         run: |
           echo "🔨 开始构建API Gateway和微服务..."
+          echo "📊 使用共享go.mod架构 - 优化依赖下载和编译时间"
           go env -w GOPROXY=https://goproxy.cn,direct
           
+          # 进入backend目录（共享go.mod）
+          cd backend
+          
           # 创建bin目录
-          mkdir -p backend/bin
+          mkdir -p bin
           
           # ========================================
-          # 阶段1: 构建API Gateway (网关层)
+          # 统一依赖管理（共享go.mod的核心优势）
           # ========================================
-          echo "🌐 构建API Gateway (网关层)..."
-          cd backend
+          echo "📦 下载所有依赖（仅一次）..."
           go mod download
           go mod verify
+          echo "✅ 所有依赖下载完成"
+          echo ""
+          
+          # ========================================
+          # 批量构建所有服务（无需重复下载依赖）
+          # ========================================
+          echo "🔨 批量构建所有服务..."
+          echo ""
+          
+          # 构建API Gateway (网关层)
+          echo "🌐 构建API Gateway..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
             -ldflags="-s -w" -o bin/api-gateway ./cmd/api-gateway
-          echo "✅ API Gateway构建完成"
+          echo "✅ API Gateway"
           
-          # ========================================
-          # 阶段2: 构建微服务 (业务层)
-          # ========================================
-          echo "💼 构建微服务 (业务层)..."
+          # 构建所有微服务 (业务层)
+          echo "💼 构建微服务..."
           
-          # 构建User Service (使用jobfirst-core认证)
-          echo "构建 User Service..."
-          cd internal/user-service
-          go mod download
-          go mod verify
+          # User Service
+          echo "  构建 User Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/user-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/user-service ./cmd/user-service
+          echo "  ✅ User Service"
           
-          # 构建Resume Service (使用jobfirst-core认证)
-          echo "构建 Resume Service..."
-          cd internal/resume-service
-          go mod download
-          go mod verify
+          # Resume Service
+          echo "  构建 Resume Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/resume-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/resume-service ./cmd/resume-service
+          echo "  ✅ Resume Service"
           
-          # 构建Company Service (使用jobfirst-core认证)
-          echo "构建 Company Service..."
-          cd internal/company-service
-          go mod download
-          go mod verify
+          # Company Service
+          echo "  构建 Company Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/company-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/company-service ./cmd/company-service
+          echo "  ✅ Company Service"
           
-          # 构建Notification Service (使用jobfirst-core认证)
-          echo "构建 Notification Service..."
-          cd internal/notification-service
-          go mod download
-          go mod verify
+          # Notification Service
+          echo "  构建 Notification Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/notification-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/notification-service ./cmd/notification-service
+          echo "  ✅ Notification Service"
           
-          # 构建Template Service (使用jobfirst-core认证)
-          echo "构建 Template Service..."
-          cd internal/template-service
-          go mod download
-          go mod verify
+          # Template Service
+          echo "  构建 Template Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/template-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/template-service ./cmd/template-service
+          echo "  ✅ Template Service"
           
-          # 构建Statistics Service (使用jobfirst-core认证)
-          echo "构建 Statistics Service..."
-          cd internal/statistics-service
-          go mod download
-          go mod verify
+          # Statistics Service
+          echo "  构建 Statistics Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/statistics-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/statistics-service ./cmd/statistics-service
+          echo "  ✅ Statistics Service"
           
-          # 构建Banner Service (使用jobfirst-core认证)
-          echo "构建 Banner Service..."
-          cd internal/banner-service
-          go mod download
-          go mod verify
+          # Banner Service
+          echo "  构建 Banner Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/banner-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/banner-service ./cmd/banner-service
+          echo "  ✅ Banner Service"
           
-          # 构建Dev Team Service (使用jobfirst-core认证)
-          echo "构建 Dev Team Service..."
-          cd internal/dev-team-service
-          go mod download
-          go mod verify
+          # Dev Team Service
+          echo "  构建 Dev Team Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/dev-team-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/dev-team-service ./cmd/dev-team-service
+          echo "  ✅ Dev Team Service"
           
-          # 构建Job Service (使用jobfirst-core认证)
-          echo "构建 Job Service..."
-          cd internal/job-service
-          go mod download
-          go mod verify
+          # Job Service
+          echo "  构建 Job Service..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-            -ldflags="-s -w" -o ../../bin/job-service .
-          cd ../..
+            -ldflags="-s -w" -o bin/job-service ./cmd/job-service
+          echo "  ✅ Job Service"
           
           echo "✅ 所有服务构建完成"
           echo ""
@@ -235,8 +230,27 @@ jobs:
           ls -lh bin/
           echo ""
           echo "🏗️ 架构说明:"
-          echo "  🌐 API Gateway (8080) - 量子认证 + 反向代理"
+          echo "  🌐 API Gateway (8888) - 量子认证 + 反向代理"
           echo "  💼 微服务 (8081-8089) - jobfirst-core认证 + 业务逻辑"
+          echo "  🤖 AI Service (8100) - Python Sanic服务"
+          
+          # ========================================
+          # 打包AI服务 (Python服务)
+          # ========================================
+          cd ../..
+          echo ""
+          echo "🤖 打包AI服务..."
+          
+          if [ -d "ai-service" ]; then
+            echo "打包AI服务代码（排除venv和临时文件）..."
+            tar --exclude='venv' --exclude='__pycache__' --exclude='*.pyc' \
+                --exclude='*.log' --exclude='.env' --exclude='test_*.py' \
+                -czf backend/ai-service.tar.gz ai-service/
+            echo "✅ AI服务打包完成"
+            ls -lh backend/ai-service.tar.gz
+          else
+            echo "⚠️ AI服务目录不存在，跳过打包"
+          fi
       
       - name: 上传微服务代码和脚本
         uses: actions/upload-artifact@v4
@@ -497,6 +511,58 @@ jobs:
           echo $! > ../../logs/job-service.pid
           sleep 3
           curl -f http://localhost:8089/health && echo "✅ Job Service OK" || echo "❌ Job Service Failed"
+          
+          # ========================================
+          # 阶段4: 部署AI服务 (Python服务)
+          # ========================================
+          echo ""
+          echo "=========================================="
+          echo "🤖 部署AI服务 (Python Sanic)..."
+          echo "=========================================="
+          
+          cd ../..
+          
+          # 检查并解压AI服务
+          if [ -f "ai-service.tar.gz" ]; then
+            echo "解压AI服务代码..."
+            tar -xzf ai-service.tar.gz -C .
+            cd ai-service
+            
+            # 创建或激活虚拟环境
+            if [ ! -d "venv" ]; then
+              echo "创建Python虚拟环境..."
+              python3 -m venv venv
+            fi
+            
+            echo "激活虚拟环境并安装依赖..."
+            source venv/bin/activate
+            pip install --quiet --upgrade pip
+            pip install --quiet -r requirements.txt
+            
+            # 停止旧的AI服务
+            echo "停止旧的AI服务进程..."
+            pkill -f ai_service || true
+            sleep 2
+            
+            # 加载环境变量
+            if [ -f "../configs/.env" ]; then
+              export \$(cat ../configs/.env | grep -v '^#' | xargs)
+            fi
+            
+            # 启动AI服务
+            echo "启动AI服务 (端口: \${AI_SERVICE_PORT:-8100})..."
+            nohup python ai_service_with_zervigo.py > ../logs/ai-service.log 2>&1 &
+            echo \$! > ../logs/ai-service.pid
+            sleep 5
+            
+            # 健康检查
+            AI_PORT=\${AI_SERVICE_PORT:-8100}
+            curl -f http://localhost:\$AI_PORT/health && echo "✅ AI Service OK" || echo "⚠️ AI Service 启动中或需要配置数据库"
+            
+            cd ..
+          else
+            echo "⚠️ AI服务包不存在，跳过部署"
+          fi
           
           echo ""
           echo "=========================================="
